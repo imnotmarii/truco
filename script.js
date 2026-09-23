@@ -1,12 +1,19 @@
+// Configuração do Banco de Dados Online em Tempo Real (Firebase)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+const firebaseConfig = {
+  databaseURL: "https://truco-multiplayer-default-rtdb.firebaseio.com/"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
 let roomCode = "";
 let mySeat = -1;
 let myName = "";
 let myTeam = "";
 
-let peer = null;
-let connections = [];
-
-// Hierarquia padrão do Truco (da menor para a maior)
 const VALORES_ORDEM = ['4', '5', '6', '7', 'Q', 'J', 'K', 'A', '2', '3'];
 const NAIPES_ORDEM = ['♦', '♠', '♥', '♣'];
 
@@ -17,35 +24,21 @@ let roomState = {
   state: null
 };
 
-function saveAndBroadcastState(newState) {
-  roomState = newState;
-  
-  // Envia a mesa atualizada para todos os conectados
-  connections.forEach(conn => {
-    if (conn && conn.open) {
-      conn.send(roomState);
-    }
-  });
-
-  renderGame(roomState);
-}
-
 // Cálculo correto do poder da carta considerando as MANILHAS
 function getCardPower(card, vira) {
+  if (!card || !vira) return -1;
   const viraIdx = VALORES_ORDEM.indexOf(vira.nome);
   const manilhaIdx = (viraIdx + 1) % VALORES_ORDEM.length;
   const manilhaNome = VALORES_ORDEM[manilhaIdx];
 
-  // Se for manilha, ganha poder superior (100 a 103 baseado no naipe)
   if (card.nome === manilhaNome) {
     return 100 + NAIPES_ORDEM.indexOf(card.naipe);
   }
-  
-  // Carta comum
   return VALORES_ORDEM.indexOf(card.nome);
 }
 
-async function joinGame() {
+// Torna a função global para ser chamada pelo botão do HTML
+window.joinGame = async function() {
   const roomInput = document.getElementById('room-code').value.trim().toUpperCase();
   const nameInput = document.getElementById('player-name').value.trim();
   const selectedTeam = document.getElementById('team-select').value;
@@ -59,62 +52,34 @@ async function joinGame() {
 
   document.getElementById('btn-join').disabled = true;
 
-  // Inicia conexão PeerJS
-  initPeerConnection();
+  const roomRef = ref(db, `rooms/${roomCode}`);
 
-  document.getElementById('lobby-screen').style.display = 'none';
-  document.getElementById('game-screen').style.display = 'flex';
-
-  setInterval(updateTimer, 1000);
-}
-
-function initPeerConnection() {
-  // O primeiro a entrar com o código da sala vira o HOST (Seat 0)
-  // Tentamos conectar no Peer "host" da sala
-  const hostId = `truco-room-${roomCode}-host`;
-  
-  // Criamos um id único para este jogador
-  const myPeerId = `truco-room-${roomCode}-${Math.floor(Math.random() * 10000)}`;
-  peer = new Peer(myPeerId);
-
-  peer.on('open', (id) => {
-    // Tenta conectar ao Host da sala
-    const conn = peer.connect(hostId);
-
-    conn.on('open', () => {
-      // Conseguiu conectar! Nós somos um CLIENTE
-      setupConnection(conn);
-      // Pede para entrar na mesa
-      conn.send({ type: 'JOIN', name: myName, team: myTeam });
-    });
-
-    conn.on('error', () => {
-      // Se deu erro ao conectar no host, nós SEREMOS o HOST!
-      becomeHost(hostId);
-    });
-
-    // Se a conexão com o host falhar em 2.5s, assume que a sala não existe e cria o Host
-    setTimeout(() => {
-      if (!conn.open && mySeat === -1) {
-        becomeHost(hostId);
+  // Escuta as alterações na sala online em tempo real
+  onValue(roomRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      roomState = data;
+      
+      // Procura o assento do jogador atual se ainda não estiver definido
+      const existingPlayer = (roomState.players || []).find(p => p && p.name.toLowerCase() === myName.toLowerCase());
+      if (existingPlayer) {
+        mySeat = existingPlayer.seat;
       }
-    }, 2500);
-  });
 
-  peer.on('error', (err) => {
-    if (err.type === 'peer-unavailable') {
-      becomeHost(hostId);
+      renderGame(roomState);
+      checkBotTurn();
     }
   });
-}
 
-function becomeHost(hostId) {
-  if (peer) peer.destroy();
+  // Tenta registrar o jogador na sala
+  const snapshot = await new Promise(resolve => {
+    onValue(roomRef, snap => resolve(snap), { onlyOnce: true });
+  });
 
-  // Registra este jogador como o HOST da sala
-  peer = new Peer(hostId);
+  let data = snapshot.val();
 
-  peer.on('open', () => {
+  if (!data) {
+    // Cria a sala online se for a primeira a entrar
     mySeat = 0;
     roomState = {
       roomCode: roomCode,
@@ -122,73 +87,40 @@ function becomeHost(hostId) {
       hands: {},
       state: null
     };
-    renderGame(roomState);
-  });
+    await set(roomRef, roomState);
+  } else {
+    let players = data.players || [];
+    let existingPlayer = players.find(p => p && p.name.toLowerCase() === myName.toLowerCase());
 
-  peer.on('connection', (conn) => {
-    connections.push(conn);
-    
-    conn.on('data', (data) => {
-      if (data.type === 'JOIN') {
-        // Um novo jogador quer entrar na mesa!
-        handlePlayerJoin(conn, data.name, data.team);
-      } else if (data.type === 'ACTION_PLAY') {
-        executePlay(data.cardIdx);
-      } else if (data.type === 'ACTION_TRUCO') {
-        askTruco();
+    if (!existingPlayer) {
+      if (players.length >= 6) {
+        const botIndex = players.findIndex(p => p && p.isBot);
+        if (botIndex !== -1) {
+          players.splice(botIndex, 1);
+        } else {
+          return alert("Esta sala já está cheia com 6 jogadoras!");
+        }
       }
-    });
 
-    conn.on('close', () => {
-      // Se alguém desconectar
-      connections = connections.filter(c => c !== conn);
-    });
-  });
-}
+      const takenSeats = players.map(p => p.seat);
+      mySeat = [0, 1, 2, 3, 4, 5].find(s => !takenSeats.includes(s));
 
-function handlePlayerJoin(conn, name, team) {
-  if (roomState.players.length >= 6) {
-    // Procura se tem bot para substituir
-    const botIndex = roomState.players.findIndex(p => p && p.isBot);
-    if (botIndex !== -1) {
-      roomState.players.splice(botIndex, 1);
-    } else {
-      return;
+      players.push({ name: myName, seat: mySeat, team: myTeam, isBot: false });
+      
+      await update(ref(db, `rooms/${roomCode}`), { players: players });
+
+      if (players.length === 6 && (!data.state || !data.state.started)) {
+        initNewHand(players);
+      }
     }
   }
 
-  const takenSeats = roomState.players.map(p => p.seat);
-  const newSeat = [0, 1, 2, 3, 4, 5].find(s => !takenSeats.includes(s));
+  document.getElementById('lobby-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'flex';
 
-  if (newSeat !== undefined) {
-    roomState.players.push({ name: name, seat: newSeat, team: team, isBot: false });
-    
-    // Avisa ao jogador qual a cadeira dele
-    conn.send({ type: 'WELCOME', seat: newSeat });
+  setInterval(updateTimer, 1000);
+};
 
-    if (roomState.players.length === 6 && (!roomState.state || !roomState.state.started)) {
-      initNewHand();
-    } else {
-      saveAndBroadcastState(roomState);
-    }
-  }
-}
-
-function setupConnection(conn) {
-  connections.push(conn);
-  
-  conn.on('data', (data) => {
-    if (data.type === 'WELCOME') {
-      mySeat = data.seat;
-    } else if (data.players) {
-      // Recebeu o estado atualizado da mesa
-      roomState = data;
-      renderGame(roomState);
-    }
-  });
-}
-
-// Embaralhamento de alta aleatoriedade (Fisher-Yates)
 function shuffleDeck(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -196,7 +128,7 @@ function shuffleDeck(array) {
   }
 }
 
-function initNewHand() {
+async function initNewHand(currentPlayers) {
   let deck = [];
   for (let n of NAIPES_ORDEM) {
     for (let v of VALORES_ORDEM) {
@@ -218,8 +150,7 @@ function initNewHand() {
   const previousScoreB = roomState.state ? roomState.state.scoreB : 0;
   const firstTurn = roomState.state ? (roomState.state.handStartPlayer + 1) % 6 : 0;
 
-  roomState.hands = hands;
-  roomState.state = {
+  const newState = {
     started: true,
     isWaitingRoundDelay: false,
     scoreA: previousScoreA,
@@ -235,39 +166,39 @@ function initNewHand() {
     log: "Nova mão iniciada! Valendo 1 ponto."
   };
 
-  saveAndBroadcastState(roomState);
+  await update(ref(db, `rooms/${roomCode}`), {
+    players: currentPlayers || roomState.players,
+    hands: hands,
+    state: newState
+  });
 }
 
-function addBot() {
-  if (roomState.players.length >= 6) return alert("A sala já está cheia!");
+window.addBot = async function() {
+  let players = roomState.players || [];
+  if (players.length >= 6) return alert("A sala já está cheia!");
 
-  const takenSeats = roomState.players.map(p => p.seat);
+  const takenSeats = players.map(p => p.seat);
   const botSeat = [0, 1, 2, 3, 4, 5].find(s => !takenSeats.includes(s));
   const botTeam = (botSeat % 2 === 0) ? 'A' : 'B';
 
-  roomState.players.push({ 
+  players.push({ 
     name: `Bot ${botSeat + 1}`, 
     seat: botSeat, 
     team: botTeam, 
     isBot: true 
   });
 
-  if (roomState.players.length === 6 && (!roomState.state || !roomState.state.started)) {
-    initNewHand();
-  } else {
-    saveAndBroadcastState(roomState);
-  }
-}
+  await update(ref(db, `rooms/${roomCode}`), { players: players });
 
-function askTruco() {
-  if (mySeat !== 0 && connections.length > 0) {
-    connections[0].send({ type: 'ACTION_TRUCO' });
-    return;
+  if (players.length === 6 && (!roomState.state || !roomState.state.started)) {
+    initNewHand(players);
   }
+};
 
+window.askTruco = async function() {
   if (!roomState.state || !roomState.state.started) return;
-
   let state = roomState.state;
+
   if (state.currentTurn !== mySeat) return alert("Você só pode pedir TRUCO na sua vez!");
 
   if (state.handValue === 1) state.handValue = 3;
@@ -277,35 +208,31 @@ function askTruco() {
 
   const player = roomState.players.find(p => p.seat === mySeat);
   state.log = `🔥 TRUCO PEDIDO por ${player ? player.name : myName}! Valendo ${state.handValue} pt(s)!`;
-  saveAndBroadcastState(roomState);
-}
 
-function playCard(cardIdx) {
+  await update(ref(db, `rooms/${roomCode}/state`), state);
+};
+
+window.playCard = function(cardIdx) {
   if (!roomState.state || roomState.state.currentTurn !== mySeat) {
     return alert("Aguarde a sua vez de jogar!");
   }
-
-  if (mySeat !== 0 && connections.length > 0) {
-    // Se for cliente, avisa o Host que jogou essa carta
-    connections[0].send({ type: 'ACTION_PLAY', cardIdx: cardIdx });
-    return;
-  }
-
   executePlay(cardIdx);
-}
+};
 
-function executePlay(cardIdx) {
+async function executePlay(cardIdx) {
   const state = roomState.state;
   if (!state || state.isWaitingRoundDelay) return;
 
   const currentSeat = state.currentTurn;
   const player = roomState.players.find(p => p.seat === currentSeat);
-  let hand = roomState.hands[currentSeat];
+  let hand = roomState.hands[currentSeat] || [];
 
-  if (!hand || hand.length === 0) return;
+  if (hand.length === 0) return;
 
   const card = hand.splice(cardIdx, 1)[0];
   const power = getCardPower(card, state.vira);
+
+  if (!state.playedCardsInRound) state.playedCardsInRound = [];
 
   state.playedCardsInRound.push({
     card: card,
@@ -317,9 +244,11 @@ function executePlay(cardIdx) {
 
   state.log = `${player.name} jogou ${card.nome}${card.naipe}`;
 
+  roomState.hands[currentSeat] = hand;
+
   if (state.playedCardsInRound.length === 6) {
     state.isWaitingRoundDelay = true;
-    saveAndBroadcastState(roomState);
+    await update(ref(db, `rooms/${roomCode}`), { hands: roomState.hands, state: state });
 
     setTimeout(() => {
       evaluateRound();
@@ -327,11 +256,11 @@ function executePlay(cardIdx) {
   } else {
     state.currentTurn = (state.currentTurn + 1) % 6;
     state.turnStartTime = Date.now();
-    saveAndBroadcastState(roomState);
+    await update(ref(db, `rooms/${roomCode}`), { hands: roomState.hands, state: state });
   }
 }
 
-function evaluateRound() {
+async function evaluateRound() {
   const state = roomState.state;
   const cards = state.playedCardsInRound;
 
@@ -358,6 +287,7 @@ function evaluateRound() {
     state.log = `🏆 Trio ${roundWinnerTeam} venceu a rodada com ${topCards[0].card.nome}${topCards[0].card.naipe} (${topCards[0].playerName})!`;
   }
 
+  if (!state.roundWinners) state.roundWinners = [];
   state.roundWinners.push(roundWinnerTeam);
 
   const rw = state.roundWinners;
@@ -382,7 +312,7 @@ function evaluateRound() {
     if (handWinner === 'B') state.scoreB += state.handValue;
 
     state.log += ` 🎉 TRIO ${handWinner} GANHOU A MÃO (+${state.handValue} pts)!`;
-    saveAndBroadcastState(roomState);
+    await update(ref(db, `rooms/${roomCode}/state`), state);
 
     setTimeout(() => {
       if (state.scoreA >= 12 || state.scoreB >= 12) {
@@ -397,17 +327,33 @@ function evaluateRound() {
     state.roundStartPlayer = roundWinnerSeat;
     state.playedCardsInRound = [];
     state.turnStartTime = Date.now();
-    saveAndBroadcastState(roomState);
+    await update(ref(db, `rooms/${roomCode}/state`), state);
+  }
+}
+
+function checkBotTurn() {
+  if (mySeat !== 0) return; // Apenas o Host executa a IA do Bot
+  const state = roomState.state;
+  if (!state || !state.started || state.isWaitingRoundDelay) return;
+
+  const currentSeat = state.currentTurn;
+  const currentPlayer = (roomState.players || []).find(p => p && p.seat === currentSeat);
+
+  if (currentPlayer && currentPlayer.isBot) {
+    setTimeout(() => {
+      const bestCardIdx = chooseBestBotCardIndex(currentSeat);
+      executePlay(bestCardIdx);
+    }, 1000);
   }
 }
 
 function chooseBestBotCardIndex(botSeat) {
   const state = roomState.state;
-  const botHand = roomState.hands[botSeat];
+  const botHand = roomState.hands[botSeat] || [];
   const botPlayer = roomState.players.find(p => p.seat === botSeat);
-  const cardsOnTable = state.playedCardsInRound;
+  const cardsOnTable = state.playedCardsInRound || [];
 
-  if (!botHand || botHand.length === 0) return 0;
+  if (botHand.length === 0) return 0;
 
   const botOptions = botHand.map((card, index) => ({
     index: index,
@@ -442,20 +388,6 @@ function updateTimer() {
 
   const timerEl = document.getElementById('timer');
   if (timerEl) timerEl.innerText = remaining;
-
-  if (mySeat === 0) { // Apenas o Host executa a IA e o Cronômetro
-    const currentSeat = roomState.state.currentTurn;
-    const currentPlayer = roomState.players.find(p => p.seat === currentSeat);
-
-    if (currentPlayer && currentPlayer.isBot) {
-      if (remaining <= 28) {
-        const bestCardIdx = chooseBestBotCardIndex(currentSeat);
-        executePlay(bestCardIdx);
-      }
-    } else if (remaining === 0) {
-      executePlay(0);
-    }
-  }
 }
 
 function renderGame(room) {
@@ -467,7 +399,7 @@ function renderGame(room) {
     const info = document.getElementById(`info-${i}`);
     const cardsCont = document.getElementById(`cards-${i}`);
 
-    const p = players.find(player => player.seat === i);
+    const p = players.find(player => player && player.seat === i);
 
     if (p) {
       if (info) info.innerText = `${p.name} (${p.team})`;
@@ -480,7 +412,7 @@ function renderGame(room) {
               const c = document.createElement('div');
               c.className = `card ${card.isRed ? 'red' : ''}`;
               c.innerText = `${card.nome}${card.naipe}`;
-              c.onclick = () => playCard(idx);
+              c.onclick = () => window.playCard(idx);
               cardsCont.appendChild(c);
             });
           } else {
@@ -530,6 +462,9 @@ function renderGame(room) {
   }
 }
 
-function resetMesa() {
+window.resetMesa = async function() {
+  if (roomCode) {
+    await remove(ref(db, `rooms/${roomCode}`));
+  }
   location.reload();
-}
+};
