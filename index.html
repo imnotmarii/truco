@@ -3,258 +3,106 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Truco das Amigas Online</title>
-  
-  <!-- Biblioteca PeerJS para conexão multiplayer online -->
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-
-  <style>
-    :root {
-      --pink-dark: #880e4f;
-      --pink-main: #d81b60;
-      --pink-light: #f8bbd0;
-      --gold: #ffb703;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
-      color: var(--pink-dark);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      padding: 15px;
-    }
-
-    h1 { font-size: 2rem; margin-bottom: 10px; color: var(--pink-dark); }
-
-    #lobby-screen {
-      background: white;
-      border: 3px solid var(--pink-main);
-      border-radius: 20px;
-      padding: 25px;
-      width: 100%;
-      max-width: 400px;
-      text-align: center;
-      box-shadow: 0 10px 25px rgba(216, 27, 96, 0.2);
-      margin-top: 20px;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid var(--pink-light);
-      border-radius: 10px;
-      font-size: 1rem;
-      margin: 8px 0;
-      text-align: center;
-      outline: none;
-    }
-
-    button {
-      padding: 10px 18px;
-      font-size: 0.95rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 20px;
-      background-color: var(--pink-main);
-      color: white;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(216, 27, 96, 0.3);
-      margin: 3px;
-    }
-
-    button:hover { background-color: var(--pink-dark); }
-
-    .btn-truco { background-color: var(--gold); color: #333; font-size: 1.1rem; }
-
-    #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 800px; }
-
-    .scoreboard {
-      display: flex;
-      gap: 15px;
-      background: white;
-      padding: 8px 20px;
-      border-radius: 12px;
-      border: 2px solid var(--pink-main);
-      margin-bottom: 10px;
-      font-weight: bold;
-      font-size: 0.95rem;
-    }
-
-    .timer-badge {
-      background: #c62828;
-      color: white;
-      padding: 2px 10px;
-      border-radius: 12px;
-      font-size: 0.9rem;
-    }
-
-    .table-container {
-      position: relative;
-      width: 100%;
-      max-width: 700px;
-      height: 440px;
-      background: radial-gradient(circle, #f8bbd0 0%, #ec407a 100%);
-      border: 8px solid var(--pink-dark);
-      border-radius: 180px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .center-area {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .vira-box {
-      background: rgba(255, 255, 255, 0.9);
-      padding: 4px 12px;
-      border-radius: 10px;
-      border: 2px solid var(--pink-dark);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: bold;
-      font-size: 0.85rem;
-    }
-
-    .center-mat {
-      width: 220px;
-      height: 130px;
-      border: 2px dashed rgba(255, 255, 255, 0.8);
-      border-radius: 15px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      justify-content: center;
-      align-items: center;
-      padding: 5px;
-    }
-
-    .player-spot {
-      position: absolute;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 110px;
-    }
-
-    .player-info {
-      font-size: 0.75rem;
-      font-weight: bold;
-      padding: 4px 8px;
-      border-radius: 10px;
-      background: white;
-      border: 1px solid var(--pink-main);
-      text-align: center;
-      width: 100%;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .active-turn { outline: 3px solid var(--gold); box-shadow: 0 0 12px var(--gold); }
-
-    #p0 { bottom: 10px; left: 50%; transform: translateX(-50%); }
-    #p1 { bottom: 60px; left: 15px; }
-    #p2 { top: 60px; left: 15px; }
-    #p3 { top: 10px; left: 50%; transform: translateX(-50%); }
-    #p4 { top: 60px; right: 15px; }
-    #p5 { bottom: 60px; right: 15px; }
-
-    .cards-container { display: flex; gap: 4px; margin-top: 5px; }
-
-    .card {
-      width: 34px;
-      height: 50px;
-      background: white;
-      color: #333;
-      border-radius: 5px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-weight: bold;
-      font-size: 0.85rem;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-
-    .card.red { color: #d32f2f; }
-    .card.played { width: 30px; height: 44px; cursor: default; }
-
-    .card-back {
-      width: 28px;
-      height: 42px;
-      background: #ad1457;
-      border: 1.5px solid white;
-      border-radius: 4px;
-    }
-
-    .actions-bar { margin-top: 12px; display: flex; gap: 10px; align-items: center; }
-    #log { margin-top: 10px; font-weight: bold; color: var(--pink-dark); text-align: center; }
-  </style>
+  <title>Truco Paulista 6 Jogadores</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Conexão WebSocket Pública e Instantânea -->
+  <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 </head>
 <body>
 
-  <h1> Truco das Amigas </h1>
+  <!-- TELA DE LOBBY / ENTRADA -->
+  <div id="lobby-screen" class="lobby-container">
+    <div class="lobby-card">
+      <h1>🎴 Truco Paulista (6 Jogadores)</h1>
 
-  <div id="lobby-screen">
-    <h2>Entrar na Mesa Online</h2>
-    <p style="font-size:0.8rem; color:#666; margin-bottom:10px;">Digitem exatamente a mesma palavra no código da sala!</p>
-    
-    <input type="text" id="room-code" placeholder="Código da Sala (ex: MESA1)" value="MESA1">
-    <input type="text" id="player-name" placeholder="O teu nome...">
-    
-    <label style="font-size: 0.85rem; font-weight: bold; margin-top: 5px; display: block;">Escolha o seu Trio:</label>
-    <select id="team-select">
-      <option value="A">Trio A</option>
-      <option value="B">Trio B</option>
-    </select>
+      <div class="input-group">
+        <label for="player-name">Seu Nome:</label>
+        <input type="text" id="player-name" placeholder="Ex: Mari" />
+      </div>
 
-    <button id="btn-join" onclick="joinGame()">Entrar na Sala Juntas</button>
+      <div class="input-group">
+        <label for="team-select">Escolha seu Trio:</label>
+        <select id="team-select">
+          <option value="A">Trio A</option>
+          <option value="B">Trio B</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="room-code">Código da Sala:</label>
+        <input type="text" id="room-code" placeholder="Ex: SALA123" style="text-transform: uppercase;" />
+      </div>
+
+      <div class="button-group" style="display: flex; gap: 10px; margin-top: 15px;">
+        <button id="btn-create" onclick="createGame()" style="flex: 1; background: #28a745; color: white;">✨ Criar Sala</button>
+        <button id="btn-join" onclick="joinGame()" style="flex: 1; background: #007bff; color: white;">🚪 Entrar na Sala</button>
+      </div>
+    </div>
   </div>
 
-  <div id="game-screen">
-    <div class="scoreboard">
-      <div>Trio A: <span id="score-a">0</span></div>
-      <div>|</div>
-      <div>Mão: <span id="hand-val">1 pt</span></div>
-      <div>|</div>
-      <div>Trio B: <span id="score-b">0</span></div>
-      <div class="timer-badge">⏳ <span id="timer">30</span>s</div>
+  <!-- TELA DO JOGO -->
+  <div id="game-screen" class="game-container" style="display: none;">
+    
+    <!-- PLACAR SUPERIOR -->
+    <div class="top-bar">
+      <div class="score-box">Trio A: <span id="score-a">0</span></div>
+      <div class="score-box">Mão: <span id="hand-val">1 pt</span></div>
+      <div class="score-box">Trio B: <span id="score-b">0</span></div>
+      <div class="timer-box">⌛ <span id="timer">30</span>s</div>
     </div>
 
-    <div class="table-container">
-      <div class="center-area">
-        <div class="vira-box">
+    <!-- MESA DO JOGO -->
+    <div class="table">
+      <!-- 6 Posicões das Jogadoras -->
+      <div class="seat seat-0" id="seat-0">
+        <div class="player-info" id="info-0">Vazio</div>
+        <div class="cards-container" id="cards-0"></div>
+      </div>
+
+      <div class="seat seat-1" id="seat-1">
+        <div class="player-info" id="info-1">Vazio</div>
+        <div class="cards-container" id="cards-1"></div>
+      </div>
+
+      <div class="seat seat-2" id="seat-2">
+        <div class="player-info" id="info-2">Vazio</div>
+        <div class="cards-container" id="cards-2"></div>
+      </div>
+
+      <div class="seat seat-3" id="seat-3">
+        <div class="player-info" id="info-3">Vazio</div>
+        <div class="cards-container" id="cards-3"></div>
+      </div>
+
+      <div class="seat seat-4" id="seat-4">
+        <div class="player-info" id="info-4">Vazio</div>
+        <div class="cards-container" id="cards-4"></div>
+      </div>
+
+      <div class="seat seat-5" id="seat-5">
+        <div class="player-info" id="info-5">Vazio</div>
+        <div class="cards-container" id="cards-5"></div>
+      </div>
+
+      <!-- CENTRO DA MESA -->
+      <div class="table-center">
+        <div class="vira-container">
           <span>Vira:</span>
           <div id="vira-card-slot"></div>
         </div>
         <div class="center-mat" id="center-mat"></div>
       </div>
-
-      <div class="player-spot" id="p0"><div class="player-info" id="info-0">Vazio</div><div class="cards-container" id="cards-0"></div></div>
-      <div class="player-spot" id="p1"><div class="player-info" id="info-1">Vazio</div><div class="cards-container" id="cards-1"></div></div>
-      <div class="player-spot" id="p2"><div class="player-info" id="info-2">Vazio</div><div class="cards-container" id="cards-2"></div></div>
-      <div class="player-spot" id="p3"><div class="player-info" id="info-3">Vazio</div><div class="cards-container" id="cards-3"></div></div>
-      <div class="player-spot" id="p4"><div class="player-info" id="info-4">Vazio</div><div class="cards-container" id="cards-4"></div></div>
-      <div class="player-spot" id="p5"><div class="player-info" id="info-5">Vazio</div><div class="cards-container" id="cards-5"></div></div>
     </div>
 
-    <div class="actions-bar">
-      <button id="btn-truco" class="btn-truco" onclick="askTruco()"> TRUCO!</button>
-      <button onclick="addBot()">+ Adicionar Bot</button>
-      <button onclick="resetMesa()" style="background:#c62828;">Sair / Resetar Sala</button>
+    <!-- PAINEL DE AÇÕES E LOGS -->
+    <div class="bottom-bar">
+      <div class="action-buttons">
+        <button onclick="askTruco()" class="btn-truco">TRUCO!</button>
+        <button onclick="addBot()" class="btn-bot">+ Adicionar Bot</button>
+        <button onclick="resetMesa()" class="btn-reset">Sair / Resetar Sala</button>
+      </div>
+      <div id="log" class="log-box">Aguardando jogadoras...</div>
     </div>
-
-    <div id="log">Aguardando jogadoras...</div>
   </div>
 
   <script src="script.js"></script>
