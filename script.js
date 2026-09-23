@@ -1,62 +1,30 @@
+// Configuração do Firebase com banco público temporário para comunicação em tempo real
+const firebaseConfig = {
+  databaseURL: "https://truco-6p-default-rtdb.firebaseio.com/"
+};
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.database();
+
 let roomCode = "";
 let mySeat = -1;
 let myName = "";
 let myTeam = "";
 let isHost = false;
+let roomRef = null;
 
 const VALORES_ORDEM = ['4', '5', '6', '7', 'Q', 'J', 'K', 'A', '2', '3'];
 const NAIPES_ORDEM = ['♦', '♠', '♥', '♣'];
 
-let pusher = null;
-let channel = null;
-
-let roomState = {
-  roomCode: "",
-  players: [],
-  hands: {},
-  state: null
-};
-
-// Conexão websocket usando chave pública instantânea
-function initPusherChannel(code) {
-  pusher = new Pusher('app-key-truco', {
-    cluster: 'mt1',
-    wsHost: 'ws-us3.pusher.com',
-    wsPort: 80,
-    wssPort: 443,
-    enabledTransports: ['ws', 'wss']
-  });
-
-  // Usa BroadcastChannel local para sincronizar abas e dispositivos
-  channel = new BroadcastChannel(`truco_room_${code}`);
-  channel.onmessage = (event) => {
-    const data = event.data;
-    if (data.type === 'SYNC') {
-      roomState = data.state;
-      renderGame(roomState);
-      checkBotTurn();
-    } else if (data.type === 'JOIN_REQUEST' && isHost) {
-      handlePlayerJoin(data.name, data.team);
-    } else if (data.type === 'PLAY_CARD' && isHost) {
-      executePlaySeat(data.seat, data.cardIdx);
-    } else if (data.type === 'TRUCO_REQUEST' && isHost) {
-      executeTrucoSeat(data.seat);
-    }
-  };
-}
-
-function broadcastState() {
-  localStorage.setItem(`truco_data_${roomCode}`, JSON.stringify(roomState));
-  if (channel) {
-    channel.postMessage({ type: 'SYNC', state: roomState });
-  }
-  renderGame(roomState);
-}
+let currentRoomData = null;
 
 function getCardPower(card, vira) {
   if (!card || !vira) return -1;
-  const viraIdx = VALORES_ORDEM.indexOf(vira.nome);
-  const manilhaIdx = (viraIdx + 1) % VALORES_ORDEM.length;
+  const viraIdx = VALORES_ORDEM.indexOf(card.nome ? card.nome : card);
+  const viraCardIdx = VALORES_ORDEM.indexOf(vira.nome);
+  const manilhaIdx = (viraCardIdx + 1) % VALORES_ORDEM.length;
   const manilhaNome = VALORES_ORDEM[manilhaIdx];
 
   if (card.nome === manilhaNome) {
@@ -65,7 +33,7 @@ function getCardPower(card, vira) {
   return VALORES_ORDEM.indexOf(card.nome);
 }
 
-// BOTAO: CRIAR SALA
+// CRIAR SALA
 function createGame() {
   const roomInput = document.getElementById('room-code').value.trim().toUpperCase();
   const nameInput = document.getElementById('player-name').value.trim();
@@ -80,29 +48,36 @@ function createGame() {
   isHost = true;
   mySeat = 0;
 
-  roomState = {
-    roomCode: roomCode,
-    players: [{ name: myName, seat: 0, team: myTeam, isBot: false }],
-    hands: {},
-    state: null
+  roomRef = db.ref('rooms/' + roomCode);
+
+  const initialRoom = {
+    code: roomCode,
+    players: [
+      { name: myName, seat: 0, team: myTeam, isBot: false }
+    ],
+    state: {
+      started: false,
+      scoreA: 0,
+      scoreB: 0,
+      handValue: 1,
+      log: "Aguardando jogadoras entrarem..."
+    }
   };
 
-  initPusherChannel(roomCode);
-  broadcastState();
-
-  document.getElementById('lobby-screen').style.display = 'none';
-  document.getElementById('game-screen').style.display = 'flex';
-
-  setInterval(updateTimer, 1000);
+  roomRef.set(initialRoom).then(() => {
+    listenToRoom();
+    document.getElementById('lobby-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'flex';
+  });
 }
 
-// BOTAO: ENTRAR NA SALA
+// ENTRAR NA SALA
 function joinGame() {
   const roomInput = document.getElementById('room-code').value.trim().toUpperCase();
   const nameInput = document.getElementById('player-name').value.trim();
   const selectedTeam = document.getElementById('team-select').value;
 
-  if (!roomInput) return alert("Digite o código da sala que a sua amiga criou!");
+  if (!roomInput) return alert("Digite o código da sala!");
   if (!nameInput) return alert("Digite o seu nome!");
 
   roomCode = roomInput;
@@ -110,47 +85,58 @@ function joinGame() {
   myTeam = selectedTeam;
   isHost = false;
 
-  initPusherChannel(roomCode);
+  roomRef = db.ref('rooms/' + roomCode);
 
-  // Carrega estado local existente
-  const localData = localStorage.getItem(`truco_data_${roomCode}`);
-  if (localData) {
-    roomState = JSON.parse(localData);
-  }
+  roomRef.once('value').then((snapshot) => {
+    if (!snapshot.exists()) {
+      return alert("Esta sala não existe! Peça para sua amiga criar a sala primeiro.");
+    }
 
-  // Solicita entrada para o Host
-  channel.postMessage({ type: 'JOIN_REQUEST', name: myName, team: myTeam });
+    const room = snapshot.val();
+    let players = room.players || [];
 
-  document.getElementById('lobby-screen').style.display = 'none';
-  document.getElementById('game-screen').style.display = 'flex';
+    let existing = players.find(p => p && p.name.toLowerCase() === myName.toLowerCase());
 
-  setInterval(updateTimer, 1000);
+    if (!existing) {
+      if (players.length >= 6) {
+        return alert("A sala já está cheia (máximo 6 jogadoras)!");
+      }
+
+      const takenSeats = players.map(p => p.seat);
+      const newSeat = [0, 1, 2, 3, 4, 5].find(s => !takenSeats.includes(s));
+      mySeat = newSeat;
+
+      players.push({ name: myName, seat: newSeat, team: myTeam, isBot: false });
+
+      roomRef.child('players').set(players);
+    } else {
+      mySeat = existing.seat;
+    }
+
+    listenToRoom();
+    document.getElementById('lobby-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'flex';
+  });
 }
 
-function handlePlayerJoin(name, team) {
-  let players = roomState.players || [];
-  let existing = players.find(p => p.name.toLowerCase() === name.toLowerCase());
+// ESCUTAR ATUALIZAÇÕES DA SALA EM TEMPO REAL
+function listenToRoom() {
+  roomRef.on('value', (snapshot) => {
+    if (!snapshot.exists()) return;
+    currentRoomData = snapshot.val();
+    renderGame(currentRoomData);
 
-  if (!existing) {
-    if (players.length >= 6) {
-      const botIdx = players.findIndex(p => p.isBot);
-      if (botIdx !== -1) players.splice(botIdx, 1);
-      else return;
+    if (isHost) {
+      checkAutoStart(currentRoomData);
+      checkBotTurn(currentRoomData);
     }
+  });
+}
 
-    const takenSeats = players.map(p => p.seat);
-    const newSeat = [0, 1, 2, 3, 4, 5].find(s => !takenSeats.includes(s));
-
-    if (newSeat !== undefined) {
-      players.push({ name: name, seat: newSeat, team: team, isBot: false });
-      roomState.players = players;
-
-      if (players.length === 6 && (!roomState.state || !roomState.state.started)) {
-        initNewHand();
-      } else {
-        broadcastState();
-      }
-    }
+function checkAutoStart(room) {
+  const players = room.players || [];
+  if (players.length === 6 && (!room.state || !room.state.started)) {
+    initNewHand();
   }
 }
 
@@ -179,16 +165,17 @@ function initNewHand() {
     hands[i] = [deck.pop(), deck.pop(), deck.pop()];
   }
 
-  const previousScoreA = roomState.state ? roomState.state.scoreA : 0;
-  const previousScoreB = roomState.state ? roomState.state.scoreB : 0;
-  const firstTurn = roomState.state ? (roomState.state.handStartPlayer + 1) % 6 : 0;
+  const prevScoreA = currentRoomData && currentRoomData.state ? currentRoomData.state.scoreA || 0 : 0;
+  const prevScoreB = currentRoomData && currentRoomData.state ? currentRoomData.state.scoreB || 0 : 0;
+  const firstTurn = currentRoomData && currentRoomData.state && currentRoomData.state.handStartPlayer !== undefined 
+    ? (currentRoomData.state.handStartPlayer + 1) % 6 
+    : 0;
 
-  roomState.hands = hands;
-  roomState.state = {
+  const newState = {
     started: true,
     isWaitingRoundDelay: false,
-    scoreA: previousScoreA,
-    scoreB: previousScoreB,
+    scoreA: prevScoreA,
+    scoreB: prevScoreB,
     handValue: 1,
     vira: vira,
     handStartPlayer: firstTurn,
@@ -200,12 +187,15 @@ function initNewHand() {
     log: "Nova mão iniciada! Valendo 1 ponto."
   };
 
-  broadcastState();
+  roomRef.child('hands').set(hands);
+  roomRef.child('state').set(newState);
 }
 
 function addBot() {
   if (!isHost) return alert("Apenas quem criou a sala pode adicionar Bots!");
-  let players = roomState.players || [];
+  if (!currentRoomData) return;
+
+  let players = currentRoomData.players || [];
   if (players.length >= 6) return alert("A sala já está cheia!");
 
   const takenSeats = players.map(p => p.seat);
@@ -213,91 +203,62 @@ function addBot() {
   const botTeam = (botSeat % 2 === 0) ? 'A' : 'B';
 
   players.push({ name: `Bot ${botSeat + 1}`, seat: botSeat, team: botTeam, isBot: true });
-  roomState.players = players;
-
-  if (players.length === 6 && (!roomState.state || !roomState.state.started)) {
-    initNewHand();
-  } else {
-    broadcastState();
-  }
-}
-
-function askTruco() {
-  if (!isHost) {
-    channel.postMessage({ type: 'TRUCO_REQUEST', seat: mySeat });
-    return;
-  }
-  executeTrucoSeat(mySeat);
-}
-
-function executeTrucoSeat(seat) {
-  let state = roomState.state;
-  if (!state || !state.started || state.currentTurn !== seat) return;
-
-  if (state.handValue === 1) state.handValue = 3;
-  else if (state.handValue === 3) state.handValue = 6;
-  else if (state.handValue === 6) state.handValue = 9;
-  else if (state.handValue === 9) state.handValue = 12;
-
-  const player = roomState.players.find(p => p.seat === seat);
-  state.log = `🔥 TRUCO PEDIDO por ${player ? player.name : 'Jogador'}! Valendo ${state.handValue} pt(s)!`;
-  broadcastState();
+  roomRef.child('players').set(players);
 }
 
 function playCard(cardIdx) {
-  if (!roomState.state || roomState.state.currentTurn !== mySeat) {
+  if (!currentRoomData || !currentRoomData.state || currentRoomData.state.currentTurn !== mySeat) {
     return alert("Aguarde a sua vez de jogar!");
   }
 
-  if (!isHost) {
-    channel.postMessage({ type: 'PLAY_CARD', seat: mySeat, cardIdx: cardIdx });
-    return;
-  }
+  let hands = currentRoomData.hands || {};
+  let myHand = hands[mySeat] || [];
 
-  executePlaySeat(mySeat, cardIdx);
-}
+  if (myHand.length === 0) return;
 
-function executePlaySeat(seat, cardIdx) {
-  const state = roomState.state;
-  if (!state || state.isWaitingRoundDelay) return;
+  const card = myHand.splice(cardIdx, 1)[0];
+  const power = getCardPower(card, currentRoomData.state.vira);
+  const player = (currentRoomData.players || []).find(p => p.seat === mySeat);
 
-  const player = roomState.players.find(p => p.seat === seat);
-  let hand = roomState.hands[seat] || [];
-
-  if (hand.length === 0) return;
-
-  const card = hand.splice(cardIdx, 1)[0];
-  const power = getCardPower(card, state.vira);
-
-  if (!state.playedCardsInRound) state.playedCardsInRound = [];
-
-  state.playedCardsInRound.push({
+  let playedCards = currentRoomData.state.playedCardsInRound || [];
+  playedCards.push({
     card: card,
-    seat: seat,
-    team: player.team,
+    seat: mySeat,
+    team: player ? player.team : 'A',
     power: power,
-    playerName: player.name
+    playerName: player ? player.name : 'Jogador'
   });
 
-  state.log = `${player.name} jogou ${card.nome}${card.naipe}`;
+  const nextTurn = (currentRoomData.state.currentTurn + 1) % 6;
+  const isRoundEnd = playedCards.length === 6;
 
-  if (state.playedCardsInRound.length === 6) {
-    state.isWaitingRoundDelay = true;
-    broadcastState();
+  db.ref(`rooms/${roomCode}/hands/${mySeat}`).set(myHand);
 
-    setTimeout(() => {
-      evaluateRound();
-    }, 2500);
+  let updates = {
+    'state/playedCardsInRound': playedCards,
+    'state/log': `${player.name} jogou ${card.nome}${card.naipe}`
+  };
+
+  if (!isRoundEnd) {
+    updates['state/currentTurn'] = nextTurn;
+    updates['state/turnStartTime'] = Date.now();
   } else {
-    state.currentTurn = (state.currentTurn + 1) % 6;
-    state.turnStartTime = Date.now();
-    broadcastState();
+    updates['state/isWaitingRoundDelay'] = true;
   }
+
+  roomRef.update(updates).then(() => {
+    if (isRoundEnd && isHost) {
+      setTimeout(() => {
+        evaluateRound();
+      }, 2000);
+    }
+  });
 }
 
 function evaluateRound() {
-  const state = roomState.state;
-  const cards = state.playedCardsInRound;
+  if (!currentRoomData || !currentRoomData.state) return;
+  const state = currentRoomData.state;
+  const cards = state.playedCardsInRound || [];
 
   let maxPower = -1;
   cards.forEach(c => {
@@ -313,20 +274,16 @@ function evaluateRound() {
 
   if (hasTeamA && hasTeamB) {
     roundWinnerTeam = 'E';
-    state.log = `⚖️ Rodada empatada na carta ${topCards[0].card.nome}${topCards[0].card.naipe}!`;
     roundWinnerSeat = (state.roundStartPlayer + 1) % 6;
   } else {
     roundWinnerTeam = topCards[0].team;
     roundWinnerSeat = topCards[0].seat;
-    state.log = `🏆 Trio ${roundWinnerTeam} venceu a rodada com ${topCards[0].card.nome}${topCards[0].card.naipe} (${topCards[0].playerName})!`;
   }
 
-  if (!state.roundWinners) state.roundWinners = [];
-  state.roundWinners.push(roundWinnerTeam);
+  let rw = state.roundWinners || [];
+  rw.push(roundWinnerTeam);
 
-  const rw = state.roundWinners;
   let handWinner = null;
-
   const countA = rw.filter(w => w === 'A').length;
   const countB = rw.filter(w => w === 'B').length;
 
@@ -339,99 +296,121 @@ function evaluateRound() {
     else handWinner = rw[0] !== 'E' ? rw[0] : 'A';
   }
 
-  state.isWaitingRoundDelay = false;
-
   if (handWinner) {
-    if (handWinner === 'A') state.scoreA += state.handValue;
-    if (handWinner === 'B') state.scoreB += state.handValue;
+    let newScoreA = state.scoreA || 0;
+    let newScoreB = state.scoreB || 0;
 
-    state.log += ` 🎉 TRIO ${handWinner} GANHOU A MÃO (+${state.handValue} pts)!`;
-    broadcastState();
+    if (handWinner === 'A') newScoreA += state.handValue;
+    if (handWinner === 'B') newScoreB += state.handValue;
 
-    setTimeout(() => {
-      if (state.scoreA >= 12 || state.scoreB >= 12) {
-        alert(`🏆 FIM DE JOGO! O TRIO ${state.scoreA >= 12 ? 'A' : 'B'} VENCEU A PARTIDA!`);
-        resetMesa();
-      } else {
-        initNewHand();
-      }
-    }, 2500);
+    roomRef.child('state').update({
+      scoreA: newScoreA,
+      scoreB: newScoreB,
+      log: `🎉 TRIO ${handWinner} GANHOU A MÃO (+${state.handValue} pts)!`
+    }).then(() => {
+      setTimeout(() => {
+        if (newScoreA >= 12 || newScoreB >= 12) {
+          alert(`🏆 FIM DE JOGO! O TRIO ${newScoreA >= 12 ? 'A' : 'B'} VENCEU A PARTIDA!`);
+          resetMesa();
+        } else {
+          initNewHand();
+        }
+      }, 2000);
+    });
   } else {
-    state.currentTurn = roundWinnerSeat;
-    state.roundStartPlayer = roundWinnerSeat;
-    state.playedCardsInRound = [];
-    state.turnStartTime = Date.now();
-    broadcastState();
+    roomRef.child('state').update({
+      currentTurn: roundWinnerSeat,
+      roundStartPlayer: roundWinnerSeat,
+      roundWinners: rw,
+      playedCardsInRound: [],
+      isWaitingRoundDelay: false,
+      turnStartTime: Date.now(),
+      log: roundWinnerTeam === 'E' ? "⚖️ Rodada empatada!" : `🏆 Rodada vencida pelo Trio ${roundWinnerTeam}`
+    });
   }
 }
 
-function checkBotTurn() {
-  if (!isHost) return;
-  const state = roomState.state;
+function askTruco() {
+  if (!currentRoomData || !currentRoomData.state) return;
+  let handVal = currentRoomData.state.handValue || 1;
+
+  if (handVal === 1) handVal = 3;
+  else if (handVal === 3) handVal = 6;
+  else if (handVal === 6) handVal = 9;
+  else if (handVal === 9) handVal = 12;
+
+  const player = (currentRoomData.players || []).find(p => p.seat === mySeat);
+  roomRef.child('state').update({
+    handValue: handVal,
+    log: `🔥 TRUCO PEDIDO por ${player ? player.name : 'Jogador'}! Valendo ${handVal} pt(s)!`
+  });
+}
+
+function checkBotTurn(room) {
+  const state = room.state;
   if (!state || !state.started || state.isWaitingRoundDelay) return;
 
   const currentSeat = state.currentTurn;
-  const currentPlayer = (roomState.players || []).find(p => p && p.seat === currentSeat);
+  const currentPlayer = (room.players || []).find(p => p && p.seat === currentSeat);
 
   if (currentPlayer && currentPlayer.isBot) {
     setTimeout(() => {
-      const bestCardIdx = chooseBestBotCardIndex(currentSeat);
-      executePlaySeat(currentSeat, bestCardIdx);
-    }, 1000);
+      const botHand = (room.hands || {})[currentSeat] || [];
+      if (botHand.length > 0) {
+        playCardForBot(currentSeat, 0);
+      }
+    }, 1200);
   }
 }
 
-function chooseBestBotCardIndex(botSeat) {
-  const state = roomState.state;
-  const botHand = roomState.hands[botSeat] || [];
-  const botPlayer = roomState.players.find(p => p.seat === botSeat);
-  const cardsOnTable = state.playedCardsInRound || [];
+function playCardForBot(botSeat, cardIdx) {
+  let hands = currentRoomData.hands || {};
+  let botHand = hands[botSeat] || [];
+  if (botHand.length === 0) return;
 
-  if (botHand.length === 0) return 0;
+  const card = botHand.splice(cardIdx, 1)[0];
+  const power = getCardPower(card, currentRoomData.state.vira);
+  const player = currentRoomData.players.find(p => p.seat === botSeat);
 
-  const botOptions = botHand.map((card, index) => ({
-    index: index,
-    power: getCardPower(card, state.vira)
-  })).sort((a, b) => a.power - b.power);
-
-  if (cardsOnTable.length === 0) return botOptions[0].index;
-
-  let maxTablePower = -1;
-  let winningTeam = '';
-
-  cardsOnTable.forEach(c => {
-    if (c.power > maxTablePower) {
-      maxTablePower = c.power;
-      winningTeam = c.team;
-    }
+  let playedCards = currentRoomData.state.playedCardsInRound || [];
+  playedCards.push({
+    card: card,
+    seat: botSeat,
+    team: player.team,
+    power: power,
+    playerName: player.name
   });
 
-  if (winningTeam === botPlayer.team) return botOptions[0].index;
+  const nextTurn = (botSeat + 1) % 6;
+  const isRoundEnd = playedCards.length === 6;
 
-  const winningOption = botOptions.find(opt => opt.power > maxTablePower);
-  if (winningOption) return winningOption.index;
+  db.ref(`rooms/${roomCode}/hands/${botSeat}`).set(botHand);
 
-  return botOptions[0].index;
-}
+  let updates = {
+    'state/playedCardsInRound': playedCards,
+    'state/log': `${player.name} jogou ${card.nome}${card.naipe}`
+  };
 
-function updateTimer() {
-  if (!roomState.state || !roomState.state.started || roomState.state.isWaitingRoundDelay) return;
+  if (!isRoundEnd) {
+    updates['state/currentTurn'] = nextTurn;
+    updates['state/turnStartTime'] = Date.now();
+  } else {
+    updates['state/isWaitingRoundDelay'] = true;
+  }
 
-  const elapsedSeconds = Math.floor((Date.now() - roomState.state.turnStartTime) / 1000);
-  const remaining = Math.max(0, 30 - elapsedSeconds);
-
-  const timerEl = document.getElementById('timer');
-  if (timerEl) timerEl.innerText = remaining;
+  roomRef.update(updates).then(() => {
+    if (isRoundEnd && isHost) {
+      setTimeout(() => {
+        evaluateRound();
+      }, 2000);
+    }
+  });
 }
 
 function renderGame(room) {
   const players = room.players || [];
-  const state = room.state;
+  const state = room.state || {};
   const hands = room.hands || {};
-
-  // Atualiza assento do próprio jogador se encontrado pelo nome
-  const me = players.find(p => p && p.name.toLowerCase() === myName.toLowerCase());
-  if (me) mySeat = me.seat;
 
   for (let i = 0; i < 6; i++) {
     const info = document.getElementById(`info-${i}`);
@@ -443,7 +422,7 @@ function renderGame(room) {
 
       if (cardsCont) {
         cardsCont.innerHTML = '';
-        if (state && state.started && hands[i]) {
+        if (state.started && hands[i]) {
           if (i === mySeat) {
             hands[i].forEach((card, idx) => {
               const c = document.createElement('div');
@@ -467,41 +446,39 @@ function renderGame(room) {
     }
   }
 
-  if (state) {
-    document.getElementById('score-a').innerText = state.scoreA || 0;
-    document.getElementById('score-b').innerText = state.scoreB || 0;
-    document.getElementById('hand-val').innerText = `${state.handValue} pt${state.handValue > 1 ? 's' : ''}`;
-    document.getElementById('log').innerText = state.log || '';
+  document.getElementById('score-a').innerText = state.scoreA || 0;
+  document.getElementById('score-b').innerText = state.scoreB || 0;
+  document.getElementById('hand-val').innerText = `${state.handValue || 1} pt${(state.handValue || 1) > 1 ? 's' : ''}`;
+  document.getElementById('log').innerText = state.log || '';
 
-    const viraSlot = document.getElementById('vira-card-slot');
-    if (viraSlot && state.vira) {
-      viraSlot.innerHTML = `<div class="card ${state.vira.isRed ? 'red' : ''}" style="cursor:default;">${state.vira.nome}${state.vira.naipe}</div>`;
-    }
+  const viraSlot = document.getElementById('vira-card-slot');
+  if (viraSlot && state.vira) {
+    viraSlot.innerHTML = `<div class="card ${state.vira.isRed ? 'red' : ''}" style="cursor:default;">${state.vira.nome}${state.vira.naipe}</div>`;
+  }
 
-    const mat = document.getElementById('center-mat');
-    if (mat) {
-      mat.innerHTML = '';
-      (state.playedCardsInRound || []).forEach(item => {
-        const c = document.createElement('div');
-        c.className = `card played ${item.card.isRed ? 'red' : ''}`;
-        c.innerText = `${item.card.nome}${item.card.naipe}`;
-        mat.appendChild(c);
-      });
-    }
+  const mat = document.getElementById('center-mat');
+  if (mat) {
+    mat.innerHTML = '';
+    (state.playedCardsInRound || []).forEach(item => {
+      const c = document.createElement('div');
+      c.className = `card played ${item.card.isRed ? 'red' : ''}`;
+      c.innerText = `${item.card.nome}${item.card.naipe}`;
+      mat.appendChild(c);
+    });
+  }
 
-    for (let i = 0; i < 6; i++) {
-      const info = document.getElementById(`info-${i}`);
-      if (info) {
-        if (i === state.currentTurn) info.classList.add('active-turn');
-        else info.classList.remove('active-turn');
-      }
+  for (let i = 0; i < 6; i++) {
+    const info = document.getElementById(`info-${i}`);
+    if (info) {
+      if (i === state.currentTurn) info.classList.add('active-turn');
+      else info.classList.remove('active-turn');
     }
   }
 }
 
 function resetMesa() {
-  if (roomCode) {
-    localStorage.removeItem(`truco_data_${roomCode}`);
+  if (roomRef) {
+    roomRef.remove();
   }
   location.reload();
 }

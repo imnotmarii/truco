@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Truco Paulista 6 Jogadores</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Conexão WebSocket Pública e Instantânea -->
-  <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+  <!-- Firebase Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
@@ -34,8 +35,8 @@
       </div>
 
       <div class="button-group" style="display: flex; gap: 10px; margin-top: 15px;">
-        <button id="btn-create" onclick="createGame()" style="flex: 1; background: #28a745; color: white;">✨ Criar Sala</button>
-        <button id="btn-join" onclick="joinGame()" style="flex: 1; background: #007bff; color: white;">🚪 Entrar na Sala</button>
+        <button id="btn-create" onclick="createGame()" style="flex: 1; background: #be185d; color: white; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">✨ Criar Sala</button>
+        <button id="btn-join" onclick="joinGame()" style="flex: 1; background: #9d174d; color: white; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">🚪 Entrar na Sala</button>
       </div>
     </div>
   </div>
