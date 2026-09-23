@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Truco das Amigas</title>
+  <style>
+    :root {
+      --pink-dark: #880e4f;
+      --pink-main: #d81b60;
+      --pink-light: #f8bbd0;
+      --gold: #ffb703;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
+      color: var(--pink-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 15px;
+    }
+
+    h1 { font-size: 2rem; margin-bottom: 10px; color: var(--pink-dark); }
+
+    #lobby-screen {
+      background: white;
+      border: 3px solid var(--pink-main);
+      border-radius: 20px;
+      padding: 25px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(216, 27, 96, 0.2);
+      margin-top: 40px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid var(--pink-light);
+      border-radius: 10px;
+      font-size: 1rem;
+      margin: 15px 0;
+      text-align: center;
+      outline: none;
+    }
+
+    button {
+      padding: 10px 18px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 20px;
+      background-color: var(--pink-main);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(216, 27, 96, 0.3);
+      margin: 3px;
+    }
+
+    button:hover { background-color: var(--pink-dark); }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+    .btn-truco { background-color: #ffb703; color: #333; font-size: 1.1rem; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+    #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 800px; }
+
+    .scoreboard {
+      display: flex;
+      gap: 15px;
+      background: white;
+      padding: 8px 20px;
+      border-radius: 12px;
+      border: 2px solid var(--pink-main);
+      margin-bottom: 10px;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    .table-container {
+      position: relative;
+      width: 100%;
+      max-width: 700px;
+      height: 440px;
+      background: radial-gradient(circle, #f8bbd0 0%, #ec407a 100%);
+      border: 8px solid var(--pink-dark);
+      border-radius: 180px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .center-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vira-box {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 4px 12px;
+      border-radius: 10px;
+      border: 2px solid var(--pink-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+
+    .center-mat {
+      width: 220px;
+      height: 130px;
+      border: 2px dashed rgba(255, 255, 255, 0.8);
+      border-radius: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      align-items: center;
+      padding: 5px;
+    }
+
+    .player-spot {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 110px;
+    }
+
+    .player-info {
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 10px;
+      background: white;
+      border: 1px solid var(--pink-main);
+      text-align: center;
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .active-turn { outline: 3px solid var(--gold); box-shadow: 0 0 12px var(--gold); }
+
+    #p0 { bottom: 10px; left: 50%; transform: translateX(-50%); }
+    #p1 { bottom: 60px; left: 15px; }
+    #p2 { top: 60px; left: 15px; }
+    #p3 { top: 10px; left: 50%; transform: translateX(-50%); }
+    #p4 { top: 60px; right: 15px; }
+    #p5 { bottom: 60px; right: 15px; }
+
+    .cards-container { display: flex; gap: 4px; margin-top: 5px; }
+
+    .card {
+      width: 34px;
+      height: 50px;
+      background: white;
+      color: #333;
+      border-radius: 5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      font-size: 0.85rem;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+
+    .card:hover { transform: translateY(-5px); }
+    .card.red { color: #d32f2f; }
+    .card.played { width: 30px; height: 44px; cursor: default; transform: none; }
+
+    .card-back {
+      width: 28px;
+      height: 42px;
+      background: #ad1457;
+      border: 1.5px solid white;
+      border-radius: 4px;
+    }
+
+    .actions-bar {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #log { margin-top: 10px; font-weight: bold; color: var(--pink-dark); text-align: center; }
+  </style>
+</head>
+<body>
+
+  <h1> Truco das Amigas </h1>
+
+  <div id="lobby-screen">
+    <h2>Entrar na Mesa</h2>
+    <input type="text" id="player-name" placeholder="O teu nome aqui...">
+    <button id="btn-join" onclick="joinGame()">Entrar na Mesa</button>
+  </div>
+
+  <div id="game-screen">
+    <div class="scoreboard">
+      <div>Trio A: <span id="score-a">0</span></div>
+      <div>|</div>
+      <div>Mão: <span id="hand-val">1 pt</span></div>
+      <div>|</div>
+      <div>Trio B: <span id="score-b">0</span></div>
+    </div>
+
+    <div class="table-container">
+      <div class="center-area">
+        <div class="vira-box">
+          <span>Vira:</span>
+          <div id="vira-card-slot"></div>
+        </div>
+        <div class="center-mat" id="center-mat"></div>
+      </div>
+
+      <div class="player-spot" id="p0"><div class="player-info" id="info-0">Vazio</div><div class="cards-container" id="cards-0"></div></div>
+      <div class="player-spot" id="p1"><div class="player-info" id="info-1">Vazio</div><div class="cards-container" id="cards-1"></div></div>
+      <div class="player-spot" id="p2"><div class="player-info" id="info-2">Vazio</div><div class="cards-container" id="cards-2"></div></div>
+      <div class="player-spot" id="p3"><div class="player-info" id="info-3">Vazio</div><div class="cards-container" id="cards-3"></div></div>
+      <div class="player-spot" id="p4"><div class="player-info" id="info-4">Vazio</div><div class="cards-container" id="cards-4"></div></div>
+      <div class="player-spot" id="p5"><div class="player-info" id="info-5">Vazio</div><div class="cards-container" id="cards-5"></div></div>
+    </div>
+
+    <div class="actions-bar">
+      <button id="btn-truco" class="btn-truco" onclick="askTruco()"> TRUCO!</button>
+      <button onclick="addBot()">+ Adicionar Bot</button>
+      <button onclick="resetMesa()" style="background:#c62828;">Reiniciar Mesa</button>
+    </div>
+
+    <div id="log">Aguardando jogadoras...</div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
