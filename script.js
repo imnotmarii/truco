@@ -17,27 +17,20 @@ let roomState = {
   state: null
 };
 
-function getRoomStorageKey() {
-  return `truco_room_${roomCode}`;
-}
-
-function loadLocalState() {
-  const data = localStorage.getItem(getRoomStorageKey());
-  return data ? JSON.parse(data) : null;
-}
-
 function saveAndBroadcastState(newState) {
   roomState = newState;
-  localStorage.setItem(getRoomStorageKey(), JSON.stringify(roomState));
   
+  // Envia a mesa atualizada para todos os conectados
   connections.forEach(conn => {
-    if (conn && conn.open) conn.send(roomState);
+    if (conn && conn.open) {
+      conn.send(roomState);
+    }
   });
 
   renderGame(roomState);
 }
 
-// Cálculo correto de poder considerando a MANILHA
+// Cálculo correto do poder da carta considerando as MANILHAS
 function getCardPower(card, vira) {
   const viraIdx = VALORES_ORDEM.indexOf(vira.nome);
   const manilhaIdx = (viraIdx + 1) % VALORES_ORDEM.length;
@@ -64,56 +57,9 @@ async function joinGame() {
   myName = nameInput;
   myTeam = selectedTeam;
 
-  let saved = loadLocalState();
-  if (saved && saved.roomCode === roomCode) {
-    roomState = saved;
-  } else {
-    roomState = {
-      roomCode: roomCode,
-      players: [],
-      hands: {},
-      state: null
-    };
-  }
-
-  let existingPlayer = roomState.players.find(p => p && p.name.toLowerCase() === myName.toLowerCase());
-
-  if (existingPlayer) {
-    mySeat = existingPlayer.seat;
-    myTeam = existingPlayer.team;
-  } else {
-    if (roomState.players.length >= 6) {
-      const botIndex = roomState.players.findIndex(p => p && p.isBot);
-      if (botIndex !== -1) {
-        roomState.players.splice(botIndex, 1);
-      } else {
-        return alert("Esta sala já está cheia!");
-      }
-    }
-
-    const teamAPositions = [0, 2, 4];
-    const teamBPositions = [1, 3, 5];
-    const preferredPositions = myTeam === 'A' ? teamAPositions : teamBPositions;
-    const takenSeats = roomState.players.map(p => p ? p.seat : -1);
-
-    mySeat = preferredPositions.find(seat => !takenSeats.includes(seat));
-
-    if (mySeat === undefined) {
-      mySeat = [0, 1, 2, 3, 4, 5].find(seat => !takenSeats.includes(seat));
-      myTeam = (mySeat % 2 === 0) ? 'A' : 'B';
-    }
-
-    roomState.players.push({ name: myName, seat: mySeat, team: myTeam, isBot: false });
-  }
-
   document.getElementById('btn-join').disabled = true;
 
-  if (roomState.players.length === 6 && (!roomState.state || !roomState.state.started)) {
-    initNewHand();
-  } else {
-    saveAndBroadcastState(roomState);
-  }
-
+  // Inicia conexão PeerJS
   initPeerConnection();
 
   document.getElementById('lobby-screen').style.display = 'none';
@@ -123,27 +69,122 @@ async function joinGame() {
 }
 
 function initPeerConnection() {
-  const peerId = `truco-${roomCode}-${mySeat}`;
-  peer = new Peer(peerId);
+  // O primeiro a entrar com o código da sala vira o HOST (Seat 0)
+  // Tentamos conectar no Peer "host" da sala
+  const hostId = `truco-room-${roomCode}-host`;
+  
+  // Criamos um id único para este jogador
+  const myPeerId = `truco-room-${roomCode}-${Math.floor(Math.random() * 10000)}`;
+  peer = new Peer(myPeerId);
 
-  peer.on('open', () => {
-    for (let i = 0; i < 6; i++) {
-      if (i !== mySeat) {
-        const conn = peer.connect(`truco-${roomCode}-${i}`);
-        setupConnection(conn);
+  peer.on('open', (id) => {
+    // Tenta conectar ao Host da sala
+    const conn = peer.connect(hostId);
+
+    conn.on('open', () => {
+      // Conseguiu conectar! Nós somos um CLIENTE
+      setupConnection(conn);
+      // Pede para entrar na mesa
+      conn.send({ type: 'JOIN', name: myName, team: myTeam });
+    });
+
+    conn.on('error', () => {
+      // Se deu erro ao conectar no host, nós SEREMOS o HOST!
+      becomeHost(hostId);
+    });
+
+    // Se a conexão com o host falhar em 2.5s, assume que a sala não existe e cria o Host
+    setTimeout(() => {
+      if (!conn.open && mySeat === -1) {
+        becomeHost(hostId);
       }
-    }
+    }, 2500);
   });
 
-  peer.on('connection', (conn) => setupConnection(conn));
+  peer.on('error', (err) => {
+    if (err.type === 'peer-unavailable') {
+      becomeHost(hostId);
+    }
+  });
+}
+
+function becomeHost(hostId) {
+  if (peer) peer.destroy();
+
+  // Registra este jogador como o HOST da sala
+  peer = new Peer(hostId);
+
+  peer.on('open', () => {
+    mySeat = 0;
+    roomState = {
+      roomCode: roomCode,
+      players: [{ name: myName, seat: 0, team: myTeam, isBot: false }],
+      hands: {},
+      state: null
+    };
+    renderGame(roomState);
+  });
+
+  peer.on('connection', (conn) => {
+    connections.push(conn);
+    
+    conn.on('data', (data) => {
+      if (data.type === 'JOIN') {
+        // Um novo jogador quer entrar na mesa!
+        handlePlayerJoin(conn, data.name, data.team);
+      } else if (data.type === 'ACTION_PLAY') {
+        executePlay(data.cardIdx);
+      } else if (data.type === 'ACTION_TRUCO') {
+        askTruco();
+      }
+    });
+
+    conn.on('close', () => {
+      // Se alguém desconectar
+      connections = connections.filter(c => c !== conn);
+    });
+  });
+}
+
+function handlePlayerJoin(conn, name, team) {
+  if (roomState.players.length >= 6) {
+    // Procura se tem bot para substituir
+    const botIndex = roomState.players.findIndex(p => p && p.isBot);
+    if (botIndex !== -1) {
+      roomState.players.splice(botIndex, 1);
+    } else {
+      return;
+    }
+  }
+
+  const takenSeats = roomState.players.map(p => p.seat);
+  const newSeat = [0, 1, 2, 3, 4, 5].find(s => !takenSeats.includes(s));
+
+  if (newSeat !== undefined) {
+    roomState.players.push({ name: name, seat: newSeat, team: team, isBot: false });
+    
+    // Avisa ao jogador qual a cadeira dele
+    conn.send({ type: 'WELCOME', seat: newSeat });
+
+    if (roomState.players.length === 6 && (!roomState.state || !roomState.state.started)) {
+      initNewHand();
+    } else {
+      saveAndBroadcastState(roomState);
+    }
+  }
 }
 
 function setupConnection(conn) {
   connections.push(conn);
+  
   conn.on('data', (data) => {
-    roomState = data;
-    localStorage.setItem(getRoomStorageKey(), JSON.stringify(roomState));
-    renderGame(roomState);
+    if (data.type === 'WELCOME') {
+      mySeat = data.seat;
+    } else if (data.players) {
+      // Recebeu o estado atualizado da mesa
+      roomState = data;
+      renderGame(roomState);
+    }
   });
 }
 
@@ -163,7 +204,6 @@ function initNewHand() {
     }
   }
 
-  // Duplo embaralhamento para garantir aleatoriedade nas cartas
   shuffleDeck(deck);
   shuffleDeck(deck);
 
@@ -220,21 +260,15 @@ function addBot() {
 }
 
 function askTruco() {
-  if (!roomState.state || !roomState.state.started) {
-    return alert("A partida ainda não começou!");
+  if (mySeat !== 0 && connections.length > 0) {
+    connections[0].send({ type: 'ACTION_TRUCO' });
+    return;
   }
+
+  if (!roomState.state || !roomState.state.started) return;
 
   let state = roomState.state;
-
-  if (state.currentTurn !== mySeat) {
-    return alert("Você só pode pedir TRUCO na sua vez de jogar!");
-  }
-
-  if (state.isWaitingRoundDelay) return;
-
-  if (state.handValue >= 12) {
-    return alert("A mão já está valendo 12 pontos!");
-  }
+  if (state.currentTurn !== mySeat) return alert("Você só pode pedir TRUCO na sua vez!");
 
   if (state.handValue === 1) state.handValue = 3;
   else if (state.handValue === 3) state.handValue = 6;
@@ -242,9 +276,7 @@ function askTruco() {
   else if (state.handValue === 9) state.handValue = 12;
 
   const player = roomState.players.find(p => p.seat === mySeat);
-  const meNome = player ? player.name : myName;
-
-  state.log = `🔥 TRUCO PEDIDO por ${meNome}! A mão vale ${state.handValue} pt(s)!`;
+  state.log = `🔥 TRUCO PEDIDO por ${player ? player.name : myName}! Valendo ${state.handValue} pt(s)!`;
   saveAndBroadcastState(roomState);
 }
 
@@ -253,14 +285,18 @@ function playCard(cardIdx) {
     return alert("Aguarde a sua vez de jogar!");
   }
 
-  if (roomState.state.isWaitingRoundDelay) return;
+  if (mySeat !== 0 && connections.length > 0) {
+    // Se for cliente, avisa o Host que jogou essa carta
+    connections[0].send({ type: 'ACTION_PLAY', cardIdx: cardIdx });
+    return;
+  }
 
   executePlay(cardIdx);
 }
 
 function executePlay(cardIdx) {
   const state = roomState.state;
-  if (state.isWaitingRoundDelay) return;
+  if (!state || state.isWaitingRoundDelay) return;
 
   const currentSeat = state.currentTurn;
   const player = roomState.players.find(p => p.seat === currentSeat);
@@ -365,7 +401,6 @@ function evaluateRound() {
   }
 }
 
-// NOVA INTELIGÊNCIA DO BOT (Economiza se o oponente for imbatível)
 function chooseBestBotCardIndex(botSeat) {
   const state = roomState.state;
   const botHand = roomState.hands[botSeat];
@@ -374,18 +409,13 @@ function chooseBestBotCardIndex(botSeat) {
 
   if (!botHand || botHand.length === 0) return 0;
 
-  // Ordena as opções da mão do Bot da MAIS FRACA para a MAIS FORTE
   const botOptions = botHand.map((card, index) => ({
     index: index,
     power: getCardPower(card, state.vira)
   })).sort((a, b) => a.power - b.power);
 
-  // Se o Bot for o primeiro a jogar na rodada, lança a carta mais fraca
-  if (cardsOnTable.length === 0) {
-    return botOptions[0].index;
-  }
+  if (cardsOnTable.length === 0) return botOptions[0].index;
 
-  // Descobre a maior carta jogada até agora na mesa e de qual time ela é
   let maxTablePower = -1;
   let winningTeam = '';
 
@@ -396,21 +426,11 @@ function chooseBestBotCardIndex(botSeat) {
     }
   });
 
-  // Se o próprio parceiro do Bot já estiver ganhando a rodada, o Bot descarta a menor carta dele
-  if (winningTeam === botPlayer.team) {
-    return botOptions[0].index;
-  }
+  if (winningTeam === botPlayer.team) return botOptions[0].index;
 
-  // Procura a menor carta do Bot que consiga MATAR a maior carta da mesa
   const winningOption = botOptions.find(opt => opt.power > maxTablePower);
+  if (winningOption) return winningOption.index;
 
-  if (winningOption) {
-    // Encontrou uma carta capaz de fazer a rodada!
-    return winningOption.index;
-  }
-
-  // Se nenhuma carta do Bot for suficiente para matar o oponente, ele GUARDA as melhores
-  // e joga a carta MAIS FRACA da mão (para economizar)
   return botOptions[0].index;
 }
 
@@ -423,16 +443,18 @@ function updateTimer() {
   const timerEl = document.getElementById('timer');
   if (timerEl) timerEl.innerText = remaining;
 
-  const currentSeat = roomState.state.currentTurn;
-  const currentPlayer = roomState.players.find(p => p.seat === currentSeat);
+  if (mySeat === 0) { // Apenas o Host executa a IA e o Cronômetro
+    const currentSeat = roomState.state.currentTurn;
+    const currentPlayer = roomState.players.find(p => p.seat === currentSeat);
 
-  if (currentPlayer && currentPlayer.isBot) {
-    if (remaining <= 28) {
-      const bestCardIdx = chooseBestBotCardIndex(currentSeat);
-      executePlay(bestCardIdx);
+    if (currentPlayer && currentPlayer.isBot) {
+      if (remaining <= 28) {
+        const bestCardIdx = chooseBestBotCardIndex(currentSeat);
+        executePlay(bestCardIdx);
+      }
+    } else if (remaining === 0) {
+      executePlay(0);
     }
-  } else if (remaining === 0 && currentSeat === mySeat) {
-    executePlay(0);
   }
 }
 
@@ -509,8 +531,5 @@ function renderGame(room) {
 }
 
 function resetMesa() {
-  if (roomCode) {
-    localStorage.removeItem(getRoomStorageKey());
-  }
   location.reload();
 }
