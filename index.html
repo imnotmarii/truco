@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Truco das Amigas Online</title>
+  
+  <!-- Biblioteca PeerJS para conexão multiplayer online -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
   <style>
     :root {
       --pink-dark: #880e4f;
@@ -87,7 +91,6 @@
       padding: 2px 10px;
       border-radius: 12px;
       font-size: 0.9rem;
-      margin-left: 10px;
     }
 
     .table-container {
@@ -196,7 +199,6 @@
 
     .actions-bar { margin-top: 12px; display: flex; gap: 10px; align-items: center; }
     #log { margin-top: 10px; font-weight: bold; color: var(--pink-dark); text-align: center; }
-    .online-indicator { font-size: 0.8rem; color: #2e7d32; font-weight: bold; margin-bottom: 5px; }
   </style>
 </head>
 <body>
@@ -205,7 +207,8 @@
 
   <div id="lobby-screen">
     <h2>Entrar na Mesa Online</h2>
-    <div class="online-indicator">🌐 Servidor Online Ativo</div>
+    <p style="font-size:0.8rem; color:#666; margin-bottom:10px;">Digitem exatamente a mesma palavra no código da sala!</p>
+    
     <input type="text" id="room-code" placeholder="Código da Sala (ex: MESA1)" value="MESA1">
     <input type="text" id="player-name" placeholder="O teu nome...">
     
@@ -225,7 +228,7 @@
       <div>Mão: <span id="hand-val">1 pt</span></div>
       <div>|</div>
       <div>Trio B: <span id="score-b">0</span></div>
-      <div class="timer-badge">⏳ <span id="timer">60</span>s</div>
+      <div class="timer-badge">⏳ <span id="timer">30</span>s</div>
     </div>
 
     <div class="table-container">
