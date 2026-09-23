@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Truco das Amigas</title>
+  <title>Truco das Amigas Online</title>
   <style>
     :root {
       --pink-dark: #880e4f;
@@ -33,13 +33,13 @@
       border-radius: 20px;
       padding: 25px;
       width: 100%;
-      max-width: 380px;
+      max-width: 400px;
       text-align: center;
       box-shadow: 0 10px 25px rgba(216, 27, 96, 0.2);
-      margin-top: 30px;
+      margin-top: 20px;
     }
 
-    input {
+    input, select {
       width: 100%;
       padding: 12px;
       border: 2px solid var(--pink-light);
@@ -196,6 +196,7 @@
 
     .actions-bar { margin-top: 12px; display: flex; gap: 10px; align-items: center; }
     #log { margin-top: 10px; font-weight: bold; color: var(--pink-dark); text-align: center; }
+    .online-indicator { font-size: 0.8rem; color: #2e7d32; font-weight: bold; margin-bottom: 5px; }
   </style>
 </head>
 <body>
@@ -203,10 +204,18 @@
   <h1> Truco das Amigas </h1>
 
   <div id="lobby-screen">
-    <h2>Entrar na Mesa</h2>
+    <h2>Entrar na Mesa Online</h2>
+    <div class="online-indicator">🌐 Servidor Online Ativo</div>
     <input type="text" id="room-code" placeholder="Código da Sala (ex: MESA1)" value="MESA1">
     <input type="text" id="player-name" placeholder="O teu nome...">
-    <button id="btn-join" onclick="joinGame()">Entrar na Sala</button>
+    
+    <label style="font-size: 0.85rem; font-weight: bold; margin-top: 5px; display: block;">Escolha o seu Trio:</label>
+    <select id="team-select">
+      <option value="A">Trio A</option>
+      <option value="B">Trio B</option>
+    </select>
+
+    <button id="btn-join" onclick="joinGame()">Entrar na Sala Juntas</button>
   </div>
 
   <div id="game-screen">
@@ -239,7 +248,7 @@
     <div class="actions-bar">
       <button id="btn-truco" class="btn-truco" onclick="askTruco()"> TRUCO!</button>
       <button onclick="addBot()">+ Adicionar Bot</button>
-      <button onclick="resetMesa()" style="background:#c62828;">Sair / Limpar Sala</button>
+      <button onclick="resetMesa()" style="background:#c62828;">Sair / Resetar Sala</button>
     </div>
 
     <div id="log">Aguardando jogadoras...</div>

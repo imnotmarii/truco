@@ -1,59 +1,95 @@
+// Gerenciador de Estado Local e Servidor Nuvens (com suporte a Broadcast entre abas)
 let roomCode = "";
 let mySeat = -1;
 let myName = "";
 let myTeam = "";
 
-function getData(key) {
-  const d = localStorage.getItem(`${roomCode}_${key}`);
-  return d ? JSON.parse(d) : null;
+// Canal de comunicação instantâneo entre abas do mesmo navegador
+let syncChannel = null;
+
+// Função auxiliar de leitura de sala
+function getLocalRoomData() {
+  const data = localStorage.getItem(`truco_room_${roomCode}`);
+  return data ? JSON.parse(data) : null;
 }
 
-function setData(key, val) {
-  localStorage.setItem(`${roomCode}_${key}`, JSON.stringify(val));
+function saveLocalRoomData(data) {
+  localStorage.setItem(`truco_room_${roomCode}`, JSON.stringify(data));
+  if (syncChannel) {
+    syncChannel.postMessage(data);
+  }
 }
 
-function joinGame() {
+async function joinGame() {
   const roomInput = document.getElementById('room-code').value.trim().toUpperCase();
   const nameInput = document.getElementById('player-name').value.trim();
+  const selectedTeam = document.getElementById('team-select').value;
 
-  if (!roomInput) return alert("Digita o código da sala!");
-  if (!nameInput) return alert("Digita o teu nome!");
+  if (!roomInput) return alert("Por favor, digite o código da sala!");
+  if (!nameInput) return alert("Por favor, digite o seu nome!");
 
   roomCode = roomInput;
   myName = nameInput;
+  myTeam = selectedTeam;
 
-  let players = getData('players') || [];
+  // Conecta ao canal de sincronização entre abas/dispositivos
+  try {
+    syncChannel = new BroadcastChannel(`truco_channel_${roomCode}`);
+    syncChannel.onmessage = (event) => {
+      renderGame(event.data);
+    };
+  } catch(e) {
+    console.log("BroadcastChannel não suportado neste navegador.");
+  }
 
-  if (players.length >= 6) return alert("Esta sala já está cheia (6/6)!");
+  let room = getLocalRoomData() || { players: [], state: null, hands: {} };
 
-  mySeat = players.length;
-  myTeam = (mySeat % 2 === 0) ? 'A' : 'B';
+  // Verifica se o jogador já estava na sala
+  let existingPlayer = room.players.find(p => p.name === myName);
 
-  players.push({ name: myName, seat: mySeat, team: myTeam });
-  setData('players', players);
+  if (existingPlayer) {
+    mySeat = existingPlayer.seat;
+    myTeam = existingPlayer.team;
+  } else {
+    if (room.players.length >= 6) {
+      return alert("Esta sala já está cheia (6/6)!");
+    }
 
+    // Posições preferenciais por trio
+    const teamAPositions = [0, 2, 4];
+    const teamBPositions = [1, 3, 5];
+    const preferredPositions = myTeam === 'A' ? teamAPositions : teamBPositions;
+    const takenSeats = room.players.map(p => p.seat);
+
+    mySeat = preferredPositions.find(seat => !takenSeats.includes(seat));
+
+    if (mySeat === undefined) {
+      mySeat = [0, 1, 2, 3, 4, 5].find(seat => !takenSeats.includes(seat));
+      myTeam = (mySeat % 2 === 0) ? 'A' : 'B';
+    }
+
+    room.players.push({ name: myName, seat: mySeat, team: myTeam });
+  }
+
+  // Se completou 6 jogadores, inicia as cartas
+  if (room.players.length === 6 && !room.state) {
+    room = initHandData(room);
+  }
+
+  saveLocalRoomData(room);
+
+  // Altera telas
   document.getElementById('lobby-screen').style.display = 'none';
   document.getElementById('game-screen').style.display = 'flex';
 
-  if (players.length === 6) initHand();
+  // Renderiza imediatamente
+  renderGame(room);
 
+  // Inicia o relógio e atualização
   startPolling();
 }
 
-function addBot() {
-  let players = getData('players') || [];
-  if (players.length >= 6) return alert("Sala cheia!");
-
-  const botSeat = players.length;
-  const botTeam = (botSeat % 2 === 0) ? 'A' : 'B';
-
-  players.push({ name: `Bot ${botSeat + 1}`, seat: botSeat, team: botTeam });
-  setData('players', players);
-
-  if (players.length === 6) initHand();
-}
-
-function initHand() {
+function initHandData(room) {
   const NAIPES = ['♦', '♠', '♥', '♣'];
   const VALORES = ['4', '5', '6', '7', 'Q', 'J', 'K', 'A', '2', '3'];
   let deck = [];
@@ -72,8 +108,8 @@ function initHand() {
     hands[i] = [deck.pop(), deck.pop(), deck.pop()];
   }
 
-  setData('hands', hands);
-  setData('state', {
+  room.hands = hands;
+  room.state = {
     started: true,
     currentTurn: 0,
     handValue: 1,
@@ -82,88 +118,114 @@ function initHand() {
     vira: vira,
     playedCards: [],
     turnStartTime: Date.now(),
-    log: "Partida iniciada! 60 segundos por jogada."
-  });
+    log: "Partida Iniciada! Boa sorte a todas!"
+  };
+
+  return room;
+}
+
+function addBot() {
+  let room = getLocalRoomData();
+  if (!room || room.players.length >= 6) return alert("Sala cheia!");
+
+  const takenSeats = room.players.map(p => p.seat);
+  const botSeat = [0, 1, 2, 3, 4, 5].find(s => !takenSeats.includes(s));
+  const botTeam = (botSeat % 2 === 0) ? 'A' : 'B';
+
+  room.players.push({ name: `Bot ${botSeat + 1}`, seat: botSeat, team: botTeam });
+
+  if (room.players.length === 6 && !room.state) {
+    room = initHandData(room);
+  }
+
+  saveLocalRoomData(room);
+  renderGame(room);
 }
 
 function askTruco() {
-  let state = getData('state');
-  if (!state || !state.started) return;
+  let room = getLocalRoomData();
+  if (!room || !room.state || !room.state.started) return;
 
-  if (state.handValue === 1) state.handValue = 3;
-  else if (state.handValue === 3) state.handValue = 6;
-  else if (state.handValue === 6) state.handValue = 9;
-  else if (state.handValue === 9) state.handValue = 12;
+  if (room.state.handValue === 1) room.state.handValue = 3;
+  else if (room.state.handValue === 3) room.state.handValue = 6;
+  else if (room.state.handValue === 6) room.state.handValue = 9;
+  else if (room.state.handValue === 9) room.state.handValue = 12;
 
-  state.log = `🔥 TRUCO PEDIDO! A mão vale ${state.handValue} pontos!`;
-  setData('state', state);
+  room.state.log = `🔥 TRUCO PEDIDO por ${myName}! A mão vale ${room.state.handValue} pts!`;
+  saveLocalRoomData(room);
+  renderGame(room);
 }
 
 function playCard(cardIdx) {
-  let state = getData('state');
-  let hands = getData('hands');
-
-  if (!state || state.currentTurn !== mySeat) {
-    return alert("Aguarde a sua vez!");
+  let room = getLocalRoomData();
+  if (!room || !room.state || room.state.currentTurn !== mySeat) {
+    return alert("Aguarde a sua vez de jogar!");
   }
 
-  executePlay(cardIdx, state, hands);
+  executePlay(cardIdx, room);
 }
 
-function executePlay(cardIdx, state, hands) {
-  const currentSeat = state.currentTurn;
-  const players = getData('players') || [];
-  const player = players[currentSeat];
+function executePlay(cardIdx, room) {
+  const currentSeat = room.state.currentTurn;
+  const player = room.players.find(p => p.seat === currentSeat);
 
-  if (!hands[currentSeat] || hands[currentSeat].length === 0) return;
+  if (!room.hands[currentSeat] || room.hands[currentSeat].length === 0) return;
 
-  const card = hands[currentSeat].splice(cardIdx, 1)[0];
-  state.playedCards.push({ card: card, seat: currentSeat });
+  const card = room.hands[currentSeat].splice(cardIdx, 1)[0];
+  room.state.playedCards.push({ card: card, seat: currentSeat });
 
-  // Passa vez no sentido horário
-  state.currentTurn = (state.currentTurn + 1) % 6;
-  state.turnStartTime = Date.now(); // Reseta os 60s para o próximo
-  state.log = `${player.name} jogou ${card.nome}${card.naipe}`;
+  room.state.currentTurn = (room.state.currentTurn + 1) % 6;
+  room.state.turnStartTime = Date.now();
+  room.state.log = `${player ? player.name : 'Jogadora'} jogou ${card.nome}${card.naipe}`;
 
-  setData('hands', hands);
-  setData('state', state);
-}
-
-function checkTimer(state, hands) {
-  if (!state || !state.started) return;
-
-  const elapsedSeconds = Math.floor((Date.now() - state.turnStartTime) / 1000);
-  const remaining = Math.max(0, 60 - elapsedSeconds);
-
-  document.getElementById('timer').innerText = remaining;
-
-  // Se o tempo esgotou (60s) e é a vez do jogador atual
-  if (remaining === 0 && state.currentTurn === mySeat) {
-    if (hands[mySeat] && hands[mySeat].length > 0) {
-      executePlay(0, state, hands); // Joga a primeira carta automaticamente
-    }
-  }
+  saveLocalRoomData(room);
+  renderGame(room);
 }
 
 function startPolling() {
   setInterval(() => {
-    const players = getData('players') || [];
-    const state = getData('state');
-    const hands = getData('hands') || {};
-
-    if (state) {
-      checkTimer(state, hands);
+    let room = getLocalRoomData();
+    if (room) {
+      renderGame(room);
     }
+  }, 1000);
+}
 
-    for (let i = 0; i < 6; i++) {
-      const info = document.getElementById(`info-${i}`);
-      const cardsCont = document.getElementById(`cards-${i}`);
+function renderGame(room) {
+  if (!room) return;
 
-      if (players[i]) {
-        info.innerText = `${players[i].name} (${players[i].team})`;
+  const players = room.players || [];
+  const state = room.state;
+  const hands = room.hands || {};
 
+  // Cronômetro de 60 segundos
+  if (state && state.started) {
+    const elapsedSeconds = Math.floor((Date.now() - state.turnStartTime) / 1000);
+    const remaining = Math.max(0, 60 - elapsedSeconds);
+
+    const timerEl = document.getElementById('timer');
+    if (timerEl) timerEl.innerText = remaining;
+
+    // Jogada automática por estouro do tempo
+    if (remaining === 0 && state.currentTurn === mySeat && hands[mySeat] && hands[mySeat].length > 0) {
+      executePlay(0, room);
+      return;
+    }
+  }
+
+  // Atualiza as posições das jogadoras e os nomes no mapa da mesa
+  for (let i = 0; i < 6; i++) {
+    const info = document.getElementById(`info-${i}`);
+    const cardsCont = document.getElementById(`cards-${i}`);
+
+    const p = players.find(player => player.seat === i);
+
+    if (p) {
+      if (info) info.innerText = `${p.name} (${p.team})`;
+
+      if (cardsCont) {
+        cardsCont.innerHTML = '';
         if (state && state.started && hands[i]) {
-          cardsCont.innerHTML = '';
           if (i === mySeat) {
             hands[i].forEach((card, idx) => {
               const c = document.createElement('div');
@@ -180,23 +242,32 @@ function startPolling() {
             }
           }
         }
-      } else {
-        info.innerText = 'Vazio';
-        cardsCont.innerHTML = '';
       }
+    } else {
+      if (info) info.innerText = 'Vazio';
+      if (cardsCont) cardsCont.innerHTML = '';
+    }
+  }
+
+  // Atualiza o placar e mesa
+  if (state) {
+    const scoreAEl = document.getElementById('score-a');
+    const scoreBEl = document.getElementById('score-b');
+    const handValEl = document.getElementById('hand-val');
+    const logEl = document.getElementById('log');
+
+    if (scoreAEl) scoreAEl.innerText = state.scoreA || 0;
+    if (scoreBEl) scoreBEl.innerText = state.scoreB || 0;
+    if (handValEl) handValEl.innerText = `${state.handValue} pt${state.handValue > 1 ? 's' : ''}`;
+    if (logEl) logEl.innerText = state.log;
+
+    const viraSlot = document.getElementById('vira-card-slot');
+    if (viraSlot && state.vira) {
+      viraSlot.innerHTML = `<div class="card ${state.vira.isRed ? 'red' : ''}" style="cursor:default;">${state.vira.nome}${state.vira.naipe}</div>`;
     }
 
-    if (state) {
-      document.getElementById('score-a').innerText = state.scoreA || 0;
-      document.getElementById('score-b').innerText = state.scoreB || 0;
-      document.getElementById('hand-val').innerText = `${state.handValue} pt${state.handValue > 1 ? 's' : ''}`;
-
-      const viraSlot = document.getElementById('vira-card-slot');
-      if (state.vira) {
-        viraSlot.innerHTML = `<div class="card ${state.vira.isRed ? 'red' : ''}" style="cursor:default;">${state.vira.nome}${state.vira.naipe}</div>`;
-      }
-
-      const mat = document.getElementById('center-mat');
+    const mat = document.getElementById('center-mat');
+    if (mat) {
       mat.innerHTML = '';
       (state.playedCards || []).forEach(item => {
         const c = document.createElement('div');
@@ -204,23 +275,22 @@ function startPolling() {
         c.innerText = `${item.card.nome}${item.card.naipe}`;
         mat.appendChild(c);
       });
+    }
 
-      for (let i = 0; i < 6; i++) {
-        const info = document.getElementById(`info-${i}`);
+    // Destaque de quem é a vez
+    for (let i = 0; i < 6; i++) {
+      const info = document.getElementById(`info-${i}`);
+      if (info) {
         if (i === state.currentTurn) info.classList.add('active-turn');
         else info.classList.remove('active-turn');
       }
-
-      document.getElementById('log').innerText = state.log;
     }
-  }, 500);
+  }
 }
 
 function resetMesa() {
   if (roomCode) {
-    localStorage.removeItem(`${roomCode}_players`);
-    localStorage.removeItem(`${roomCode}_state`);
-    localStorage.removeItem(`${roomCode}_hands`);
+    localStorage.removeItem(`truco_room_${roomCode}`);
   }
   location.reload();
 }
