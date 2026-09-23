@@ -1,31 +1,36 @@
+let roomCode = "";
 let mySeat = -1;
 let myName = "";
 let myTeam = "";
 
 function getData(key) {
-  const d = localStorage.getItem(key);
+  const d = localStorage.getItem(`${roomCode}_${key}`);
   return d ? JSON.parse(d) : null;
 }
 
 function setData(key, val) {
-  localStorage.setItem(key, JSON.stringify(val));
+  localStorage.setItem(`${roomCode}_${key}`, JSON.stringify(val));
 }
 
 function joinGame() {
-  const input = document.getElementById('player-name');
-  myName = input.value.trim();
+  const roomInput = document.getElementById('room-code').value.trim().toUpperCase();
+  const nameInput = document.getElementById('player-name').value.trim();
 
-  if (!myName) return alert("Por favor, digita o teu nome!");
+  if (!roomInput) return alert("Digita o código da sala!");
+  if (!nameInput) return alert("Digita o teu nome!");
 
-  let players = getData('truco_players') || [];
+  roomCode = roomInput;
+  myName = nameInput;
 
-  if (players.length >= 6) return alert("A mesa já está cheia (6/6)!");
+  let players = getData('players') || [];
+
+  if (players.length >= 6) return alert("Esta sala já está cheia (6/6)!");
 
   mySeat = players.length;
   myTeam = (mySeat % 2 === 0) ? 'A' : 'B';
 
   players.push({ name: myName, seat: mySeat, team: myTeam });
-  setData('truco_players', players);
+  setData('players', players);
 
   document.getElementById('lobby-screen').style.display = 'none';
   document.getElementById('game-screen').style.display = 'flex';
@@ -36,14 +41,14 @@ function joinGame() {
 }
 
 function addBot() {
-  let players = getData('truco_players') || [];
-  if (players.length >= 6) return alert("Mesa cheia!");
+  let players = getData('players') || [];
+  if (players.length >= 6) return alert("Sala cheia!");
 
   const botSeat = players.length;
   const botTeam = (botSeat % 2 === 0) ? 'A' : 'B';
 
   players.push({ name: `Bot ${botSeat + 1}`, seat: botSeat, team: botTeam });
-  setData('truco_players', players);
+  setData('players', players);
 
   if (players.length === 6) initHand();
 }
@@ -67,8 +72,8 @@ function initHand() {
     hands[i] = [deck.pop(), deck.pop(), deck.pop()];
   }
 
-  setData('truco_hands', hands);
-  setData('truco_state', {
+  setData('hands', hands);
+  setData('state', {
     started: true,
     currentTurn: 0,
     handValue: 1,
@@ -76,12 +81,13 @@ function initHand() {
     scoreB: 0,
     vira: vira,
     playedCards: [],
-    log: "Mão iniciada! É a vez de jogar."
+    turnStartTime: Date.now(),
+    log: "Partida iniciada! 60 segundos por jogada."
   });
 }
 
 function askTruco() {
-  let state = getData('truco_state');
+  let state = getData('state');
   if (!state || !state.started) return;
 
   if (state.handValue === 1) state.handValue = 3;
@@ -89,34 +95,65 @@ function askTruco() {
   else if (state.handValue === 6) state.handValue = 9;
   else if (state.handValue === 9) state.handValue = 12;
 
-  state.log = `🔥 TRUCO PEDIDO! A mão agora vale ${state.handValue} pontos!`;
-  setData('truco_state', state);
+  state.log = `🔥 TRUCO PEDIDO! A mão vale ${state.handValue} pontos!`;
+  setData('state', state);
 }
 
 function playCard(cardIdx) {
-  let state = getData('truco_state');
-  let hands = getData('truco_hands');
+  let state = getData('state');
+  let hands = getData('hands');
 
   if (!state || state.currentTurn !== mySeat) {
-    return alert("Aguarde a sua vez de jogar!");
+    return alert("Aguarde a sua vez!");
   }
 
-  const card = hands[mySeat].splice(cardIdx, 1)[0];
-  state.playedCards.push({ card: card, seat: mySeat });
-  
-  // Passa para a próxima jogadora no sentido horário
-  state.currentTurn = (state.currentTurn + 1) % 6; 
-  state.log = `${myName} jogou ${card.nome}${card.naipe}`;
+  executePlay(cardIdx, state, hands);
+}
 
-  setData('truco_hands', hands);
-  setData('truco_state', state);
+function executePlay(cardIdx, state, hands) {
+  const currentSeat = state.currentTurn;
+  const players = getData('players') || [];
+  const player = players[currentSeat];
+
+  if (!hands[currentSeat] || hands[currentSeat].length === 0) return;
+
+  const card = hands[currentSeat].splice(cardIdx, 1)[0];
+  state.playedCards.push({ card: card, seat: currentSeat });
+
+  // Passa vez no sentido horário
+  state.currentTurn = (state.currentTurn + 1) % 6;
+  state.turnStartTime = Date.now(); // Reseta os 60s para o próximo
+  state.log = `${player.name} jogou ${card.nome}${card.naipe}`;
+
+  setData('hands', hands);
+  setData('state', state);
+}
+
+function checkTimer(state, hands) {
+  if (!state || !state.started) return;
+
+  const elapsedSeconds = Math.floor((Date.now() - state.turnStartTime) / 1000);
+  const remaining = Math.max(0, 60 - elapsedSeconds);
+
+  document.getElementById('timer').innerText = remaining;
+
+  // Se o tempo esgotou (60s) e é a vez do jogador atual
+  if (remaining === 0 && state.currentTurn === mySeat) {
+    if (hands[mySeat] && hands[mySeat].length > 0) {
+      executePlay(0, state, hands); // Joga a primeira carta automaticamente
+    }
+  }
 }
 
 function startPolling() {
   setInterval(() => {
-    const players = getData('truco_players') || [];
-    const state = getData('truco_state');
-    const hands = getData('truco_hands') || {};
+    const players = getData('players') || [];
+    const state = getData('state');
+    const hands = getData('hands') || {};
+
+    if (state) {
+      checkTimer(state, hands);
+    }
 
     for (let i = 0; i < 6; i++) {
       const info = document.getElementById(`info-${i}`);
@@ -180,8 +217,10 @@ function startPolling() {
 }
 
 function resetMesa() {
-  localStorage.removeItem('truco_players');
-  localStorage.removeItem('truco_state');
-  localStorage.removeItem('truco_hands');
+  if (roomCode) {
+    localStorage.removeItem(`${roomCode}_players`);
+    localStorage.removeItem(`${roomCode}_state`);
+    localStorage.removeItem(`${roomCode}_hands`);
+  }
   location.reload();
 }
