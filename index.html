@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Truco Paulista 6 Jogadores</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Firebase Scripts -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Supabase Client JS (v2) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -54,7 +53,7 @@
 
     <!-- MESA DO JOGO -->
     <div class="table">
-      <!-- 6 Posicões das Jogadoras -->
+      <!-- 6 Posições das Jogadoras -->
       <div class="seat seat-0" id="seat-0">
         <div class="player-info" id="info-0">Vazio</div>
         <div class="cards-container" id="cards-0"></div>
