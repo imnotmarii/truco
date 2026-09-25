@@ -1,11 +1,11 @@
-// CONFIGURAÇÃO DO SUPABASE
+// ==========================================
+// 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
+// ==========================================
 const SUPABASE_URL = 'https://xhqrksfotvjdsokeuglr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_NG5cqeJjuzPOmb8nleOhbQ_heuUgGHm';
+const MAIN_ROOM_CODE = "MESA_PRINCIPAL";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ESTADO LOCAL DO JOGO
-let currentRoomCode = null;
+let supabaseClient = null;
 let localPlayerId = null;
 let realtimeChannel = null;
 
@@ -14,121 +14,155 @@ let gameState = {
   scoreA: 0,
   scoreB: 0,
   handValue: 1,
-  currentTurn: 0,
-  viraCard: null,
-  tableCards: [],
   logs: []
 };
 
-// CRIAR A SALA NO BANCO DE DADOS
-async function createGame() {
-  const name = document.getElementById('player-name').value.trim();
-  const team = document.getElementById('team-select').value;
-  const roomCode = document.getElementById('room-code').value.trim().toUpperCase();
+// ==========================================
+// 2. INICIALIZAÇÃO
+// ==========================================
+window.addEventListener('load', () => {
+  if (window.supabase) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  } else {
+    console.error("Biblioteca Supabase não foi carregada no HTML.");
+  }
 
-  if (!name || !roomCode) {
-    alert('Preencha seu nome e o código da sala!');
+  // Eventos dos Botões
+  const btnEnter = document.getElementById('btn-enter');
+  if (btnEnter) btnEnter.onclick = enterGame;
+
+  const btnTruco = document.getElementById('btn-truco');
+  if (btnTruco) btnTruco.onclick = askTruco;
+
+  const btnBot = document.getElementById('btn-bot');
+  if (btnBot) btnBot.onclick = addBot;
+
+  const btnLeave = document.getElementById('btn-leave');
+  if (btnLeave) btnLeave.onclick = leaveGame;
+});
+
+// ==========================================
+// 3. ENTRAR NA MESA (SINCRONIZADO)
+// ==========================================
+async function enterGame() {
+  const nameInput = document.getElementById('player-name');
+  const teamSelect = document.getElementById('team-select');
+
+  const name = nameInput ? nameInput.value.trim() : '';
+  const team = teamSelect ? teamSelect.value : 'A';
+
+  if (!name) {
+    alert('Por favor, digite seu nome!');
     return;
   }
 
-  currentRoomCode = roomCode;
   localPlayerId = 'player_' + Math.random().toString(36).substr(2, 9);
 
-  const initialState = {
-    ...gameState,
-    players: [{ id: localPlayerId, name, team, seat: 0 }],
-    logs: [`Sala criada por ${name}.`]
-  };
-
-  const { error } = await supabase
-    .from('rooms')
-    .upsert([{ code: roomCode, state: initialState }], { onConflict: 'code' });
-
-  if (error) {
-    console.error('Erro ao criar sala:', error);
-    alert('Erro ao criar sala no Supabase. Verifique se criou a tabela no SQL Editor.');
+  if (!supabaseClient) {
+    alert("Servidor desconectado. Verifique sua conexão com o Supabase.");
     return;
   }
 
-  subscribeToRoom(roomCode);
-  showGameScreen();
+  try {
+    // Busca os dados atualizados da mesa no Supabase antes de sentar
+    let { data: room } = await supabaseClient
+      .from('rooms')
+      .select('state')
+      .eq('code', MAIN_ROOM_CODE)
+      .maybeSingle();
+
+    let currentState = (room && room.state) ? room.state : {
+      players: [],
+      scoreA: 0,
+      scoreB: 0,
+      handValue: 1,
+      logs: ['Mesa iniciada.']
+    };
+
+    if (!currentState.players) currentState.players = [];
+
+    // Intercala as posições: Trio A pega (0, 2, 4) | Trio B pega (1, 3, 5)
+    const allowedSeats = team === 'A' ? [0, 2, 4] : [1, 3, 5];
+    const takenSeats = currentState.players.map(p => p.seat);
+    const availableSeat = allowedSeats.find(seat => !takenSeats.includes(seat));
+
+    if (availableSeat === undefined) {
+      alert(`O Trio ${team} já está cheio! Escolha o outro trio.`);
+      return;
+    }
+
+    // Adiciona a jogadora no estado atualizado
+    currentState.players.push({
+      id: localPlayerId,
+      name: name,
+      team: team,
+      seat: availableSeat
+    });
+
+    currentState.logs.push(`${name} entrou no Trio ${team} (Cadeira ${availableSeat + 1})`);
+
+    // Salva o novo estado na nuvem
+    const { error: saveError } = await supabaseClient
+      .from('rooms')
+      .upsert([{ code: MAIN_ROOM_CODE, state: currentState }], { onConflict: 'code' });
+
+    if (saveError) {
+      alert("Erro ao salvar no banco: " + saveError.message);
+      return;
+    }
+
+    // Atualiza a tela local e conecta ao Realtime
+    gameState = currentState;
+    showGameScreen();
+    subscribeToRoom();
+
+  } catch (err) {
+    console.error('Erro de conexão:', err);
+    alert('Erro de conexão ao tentar entrar na mesa.');
+  }
 }
 
-// ENTRAR EM UMA SALA EXISTENTE
-async function joinGame() {
-  const name = document.getElementById('player-name').value.trim();
-  const team = document.getElementById('team-select').value;
-  const roomCode = document.getElementById('room-code').value.trim().toUpperCase();
+// ==========================================
+// 4. ESCUTAR MUDANÇAS EM TEMPO REAL
+// ==========================================
+function subscribeToRoom() {
+  if (!supabaseClient) return;
 
-  if (!name || !roomCode) {
-    alert('Preencha seu nome e o código da sala!');
-    return;
+  // Evita múltiplas conexões acumuladas
+  if (realtimeChannel) {
+    supabaseClient.removeChannel(realtimeChannel);
   }
 
-  currentRoomCode = roomCode;
-  localPlayerId = 'player_' + Math.random().toString(36).substr(2, 9);
-
-  // Buscar estado atual da sala
-  const { data: room, error } = await supabase
-    .from('rooms')
-    .select('state')
-    .eq('code', roomCode)
-    .single();
-
-  if (error || !room) {
-    alert('Sala não encontrada! Verifique o código digitado.');
-    return;
-  }
-
-  let currentState = room.state || gameState;
-
-  if (currentState.players.length >= 6) {
-    alert('A sala já está cheia (máximo de 6 jogadoras)!');
-    return;
-  }
-
-  const nextSeat = currentState.players.length;
-  currentState.players.push({ id: localPlayerId, name, team, seat: nextSeat });
-  currentState.logs.push(`${name} entrou na sala.`);
-
-  // Atualizar a sala com a nova jogadora
-  await supabase
-    .from('rooms')
-    .update({ state: currentState })
-    .eq('code', roomCode);
-
-  subscribeToRoom(roomCode);
-  showGameScreen();
-}
-
-// ESCUTAR MUDANÇAS EM TEMPO REAL
-function subscribeToRoom(roomCode) {
-  realtimeChannel = supabase.channel(`room:${roomCode}`)
+  realtimeChannel = supabaseClient.channel(`room:${MAIN_ROOM_CODE}`)
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
       table: 'rooms',
-      filter: `code=eq.${roomCode}`
+      filter: `code=eq.${MAIN_ROOM_CODE}`
     }, (payload) => {
-      gameState = payload.new.state;
-      renderUI();
+      if (payload.new && payload.new.state) {
+        gameState = payload.new.state;
+        renderUI();
+      }
     })
     .subscribe();
 }
 
-// SINCRO COM A NUVEM
 async function syncGameState() {
-  if (!currentRoomCode) return;
-  await supabase
+  if (!supabaseClient) return;
+  await supabaseClient
     .from('rooms')
     .update({ state: gameState })
-    .eq('code', currentRoomCode);
+    .eq('code', MAIN_ROOM_CODE);
 }
 
-// AÇÕES DAS JOGADORAS
+// ==========================================
+// 5. AÇÕES DA MESA
+// ==========================================
 async function askTruco() {
   gameState.handValue = gameState.handValue === 1 ? 3 : gameState.handValue + 3;
   gameState.logs.push(`TRUCO pedido! Mão vale ${gameState.handValue} pts`);
+  renderUI();
   await syncGameState();
 }
 
@@ -137,56 +171,79 @@ async function addBot() {
     alert('Mesa cheia!');
     return;
   }
-  const botSeat = gameState.players.length;
-  const botTeam = botSeat % 2 === 0 ? 'A' : 'B';
-  
-  gameState.players.push({
-    id: 'bot_' + Math.random().toString(36).substr(2, 5),
-    name: `Bot ${botSeat + 1}`,
-    team: botTeam,
-    seat: botSeat
-  });
 
-  gameState.logs.push(`Bot ${botSeat + 1} adicionado ao Trio ${botTeam}`);
-  await syncGameState();
-}
+  const takenSeats = gameState.players.map(p => p.seat);
+  let botSeat = -1;
+  let botTeam = 'A';
 
-async function resetMesa() {
-  if (confirm('Deseja realmente sair da sala?')) {
-    if (realtimeChannel) {
-      supabase.removeChannel(realtimeChannel);
+  for (let i = 0; i < 6; i++) {
+    if (!takenSeats.includes(i)) {
+      botSeat = i;
+      botTeam = (i % 2 === 0) ? 'A' : 'B';
+      break;
     }
-    document.getElementById('game-screen').style.display = 'none';
-    document.getElementById('lobby-screen').style.display = 'block';
+  }
+
+  if (botSeat !== -1) {
+    gameState.players.push({
+      id: 'bot_' + Math.random().toString(36).substr(2, 5),
+      name: `Bot (${botTeam})`,
+      team: botTeam,
+      seat: botSeat
+    });
+
+    gameState.logs.push(`Bot adicionado na Cadeira ${botSeat + 1} (${botTeam})`);
+    renderUI();
+    await syncGameState();
   }
 }
 
-// ATUALIZAR A TELA
-function renderUI() {
-  document.getElementById('score-a').innerText = gameState.scoreA || 0;
-  document.getElementById('score-b').innerText = gameState.scoreB || 0;
-  document.getElementById('hand-val').innerText = `${gameState.handValue || 1} pt`;
+async function leaveGame() {
+  if (confirm('Deseja sair da mesa?')) {
+    gameState.players = gameState.players.filter(p => p.id !== localPlayerId);
+    renderUI();
+    await syncGameState();
 
-  // Atualiza as posições dos 6 assentos
+    if (realtimeChannel && supabaseClient) {
+      supabaseClient.removeChannel(realtimeChannel);
+    }
+
+    document.getElementById('game-screen').style.display = 'none';
+    document.getElementById('lobby-screen').style.display = 'flex';
+  }
+}
+
+// ==========================================
+// 6. RENDERIZAÇÃO DA INTERFACE (UI)
+// ==========================================
+function renderUI() {
+  const scoreA = document.getElementById('score-a');
+  const scoreB = document.getElementById('score-b');
+  const handVal = document.getElementById('hand-val');
+
+  if (scoreA) scoreA.innerText = gameState.scoreA || 0;
+  if (scoreB) scoreB.innerText = gameState.scoreB || 0;
+  if (handVal) handVal.innerText = `${gameState.handValue || 1} pt`;
+
+  // Atualiza as 6 posições intercaladas
   for (let i = 0; i < 6; i++) {
     const seatEl = document.getElementById(`info-${i}`);
-    const player = gameState.players.find(p => p.seat === i);
-    if (player) {
-      seatEl.innerText = `${player.name} (${player.team})`;
-    } else {
-      seatEl.innerText = 'Vazio';
+    if (seatEl) {
+      const player = gameState.players ? gameState.players.find(p => p.seat === i) : null;
+      const teamLabel = (i % 2 === 0) ? 'Trio A' : 'Trio B';
+      seatEl.innerText = player ? `${player.name} (${player.team})` : `Vazio (${teamLabel})`;
     }
   }
 
-  // Atualizar histórico/log
+  // Atualiza o histórico de mensagens
   const logBox = document.getElementById('log');
-  if (gameState.logs && gameState.logs.length > 0) {
+  if (logBox && gameState.logs && gameState.logs.length > 0) {
     logBox.innerText = gameState.logs[gameState.logs.length - 1];
   }
 }
 
 function showGameScreen() {
   document.getElementById('lobby-screen').style.display = 'none';
-  document.getElementById('game-screen').style.display = 'block';
+  document.getElementById('game-screen').style.display = 'flex';
   renderUI();
 }

@@ -1,278 +1,163 @@
 * {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
-  background-color: #fbcfe8; /* Fundo rosa da tela */
+  background-color: #fbcfe8;
+  color: #831843;
   min-height: 100vh;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
 }
 
-/* LOBBY INICIAL */
+/* LOBBY */
 .lobby-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .lobby-card {
   background: white;
   padding: 30px;
-  border-radius: 20px;
+  border-radius: 16px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  width: 360px;
+  width: 90%;
+  max-width: 400px;
   text-align: center;
 }
 
-.lobby-card h1 {
-  font-size: 1.3rem;
-  color: #9d174d;
-  margin-bottom: 20px;
-}
-
 .input-group {
-  margin-bottom: 15px;
+  margin-top: 15px;
   text-align: left;
 }
 
 .input-group label {
   display: block;
-  font-size: 0.85rem;
   font-weight: bold;
-  color: #831843;
   margin-bottom: 5px;
 }
 
 .input-group input, .input-group select {
   width: 100%;
-  padding: 10px 12px;
-  border: 2px solid #fbcfe8;
-  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid #f472b6;
+  border-radius: 8px;
   outline: none;
-  font-weight: bold;
 }
 
-/* TELA PRINCIPAL DO JOGO */
+/* TELA DO JOGO CENTRALIZADA */
 .game-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  width: 100vw;
-  height: 100vh;
-  padding: 15px;
+  min-height: 100vh;
+  width: 100%;
+  padding: 20px;
 }
 
-/* BARRA SUPERIOR DE PLACAR */
+/* PLACAR */
 .top-bar {
   display: flex;
   gap: 15px;
   background: white;
-  padding: 8px 25px;
-  border-radius: 25px;
-  border: 2px solid #ec4899;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  padding: 10px 20px;
+  border-radius: 20px;
   font-weight: bold;
-  font-size: 0.9rem;
-  color: #831843;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-.timer-box {
-  background: #e11d48;
-  color: white;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-}
-
-/* MESA OVAL (FORMATO FIEL À IMAGEM) */
+/* MESA OVAL CENTRALIZADA */
 .table {
   position: relative;
-  width: 680px;
+  width: 100%;
+  max-width: 700px;
   height: 380px;
-  background-color: #ec4899;
-  border-radius: 190px / 190px; /* Cria a borda oval do Truco */
+  background: #ec4899;
   border: 12px solid #831843;
-  box-shadow: 0 10px 30px rgba(131, 24, 67, 0.2);
+  border-radius: 200px;
+  margin: auto; /* Centraliza no meio */
   display: flex;
   justify-content: center;
   align-items: center;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.15);
 }
 
-/* POSICIONAMENTO DOS 6 ASSENTOS AO REDOR DA MESA */
+/* ASSENTOS NA MESA */
 .seat {
   position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  z-index: 5;
 }
 
-/* Superior Central */
-.seat-0 { top: 12px; left: 50%; transform: translateX(-50%); }
-/* Superior Direito */
-.seat-1 { top: 55px; right: 25px; }
-/* Inferior Direito */
-.seat-2 { bottom: 55px; right: 25px; }
-/* Inferior Central */
-.seat-3 { bottom: 12px; left: 50%; transform: translateX(-50%); }
-/* Inferior Esquerdo */
-.seat-4 { bottom: 55px; left: 25px; }
-/* Superior Esquerdo */
-.seat-5 { top: 55px; left: 25px; }
+.seat-0 { top: 10px; left: 50%; transform: translateX(-50%); } /* Topo Centro */
+.seat-1 { top: 30px; right: 20px; }                             /* Cima Direita */
+.seat-2 { bottom: 30px; right: 20px; }                          /* Baixo Direita */
+.seat-3 { bottom: 10px; left: 50%; transform: translateX(-50%); }/* Baixo Centro */
+.seat-4 { bottom: 30px; left: 20px; }                           /* Baixo Esquerda */
+.seat-5 { top: 30px; left: 20px; }                              /* Cima Esquerda */
 
-/* CAIXAS DE INFORMAÇÃO DOS JOGADORES (PULSANTES/BRANCAS) */
 .player-info {
   background: white;
-  color: #831843;
-  padding: 6px 30px;
+  padding: 6px 14px;
   border-radius: 20px;
-  font-size: 0.8rem;
   font-weight: bold;
-  border: 1px solid #f472b6;
+  font-size: 13px;
+  border: 2px solid #be185d;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  min-width: 110px;
-  text-align: center;
+  white-space: nowrap;
 }
 
-/* INDICAÇÃO DE QUEM É A VEZ DE JOGAR */
-.active-turn {
-  border: 2px solid #e11d48 !important;
-  box-shadow: 0 0 12px rgba(225, 29, 72, 0.8) !important;
-  transform: scale(1.05);
-}
-
-/* CARTAS DOS JOGADORES */
-.cards-container {
-  display: flex;
-  gap: 5px;
-  margin-top: 4px;
-}
-
-.card {
-  width: 38px;
-  height: 52px;
-  background: white;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  font-size: 0.85rem;
-  color: #1e293b;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-  user-select: none;
-}
-
-.card.red {
-  color: #e11d48;
-}
-
-.card-back {
-  width: 25px;
-  height: 36px;
-  background: #3b82f6;
-  border: 1px solid white;
-  border-radius: 4px;
-}
-
-/* CENTRO DA MESA (VIRA E CARTAS JOGADAS) */
+/* CENTRO DA MESA */
 .table-center {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
 }
 
 .vira-container {
-  background: white;
-  color: #831843;
-  padding: 4px 15px;
-  border-radius: 15px;
-  font-size: 0.8rem;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.center-mat {
-  display: flex;
-  gap: 8px;
-  min-height: 55px;
-  border: 2px dashed rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 4px 12px;
   border-radius: 12px;
-  padding: 5px 15px;
-  align-items: center;
+  font-weight: bold;
+  font-size: 12px;
 }
 
-.card.played {
-  width: 42px;
-  height: 58px;
-  font-size: 0.95rem;
-}
-
-/* BARRA INFERIOR E BOTÕES */
+/* PAINEL INFERIOR E BOTÕES */
 .bottom-bar {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  width: 100%;
 }
 
 .action-buttons {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  justify-content: center;
 }
 
-.btn-truco {
-  background: #f59e0b;
-  color: #78350f;
+.action-buttons button {
+  padding: 10px 18px;
   border: none;
-  padding: 10px 28px;
-  border-radius: 20px;
-  font-weight: 900;
-  font-size: 0.95rem;
-  cursor: pointer;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
-}
-
-.btn-bot {
-  background: #be185d;
-  color: white;
-  border: none;
-  padding: 10px 24px;
   border-radius: 20px;
   font-weight: bold;
-  font-size: 0.85rem;
+  color: white;
   cursor: pointer;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.btn-reset {
-  background: #9f1239;
-  color: white;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 0.85rem;
-  cursor: pointer;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
-}
+.btn-truco { background-color: #f59e0b; }
+.btn-bot { background-color: #be185d; }
+.btn-reset { background-color: #9f1239; }
 
 .log-box {
-  font-size: 0.85rem;
+  font-size: 14px;
   font-weight: bold;
   color: #831843;
 }

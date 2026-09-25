@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Truco Paulista 6 Jogadores</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Supabase Client JS (v2) -->
+  
+  <!-- Biblioteca do Supabase carregada PRIMEIRO -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -28,14 +29,8 @@
         </select>
       </div>
 
-      <div class="input-group">
-        <label for="room-code">Código da Sala:</label>
-        <input type="text" id="room-code" placeholder="Ex: SALA123" style="text-transform: uppercase;" />
-      </div>
-
-      <div class="button-group" style="display: flex; gap: 10px; margin-top: 15px;">
-        <button id="btn-create" onclick="createGame()" style="flex: 1; background: #be185d; color: white; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">✨ Criar Sala</button>
-        <button id="btn-join" onclick="joinGame()" style="flex: 1; background: #9d174d; color: white; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">🚪 Entrar na Sala</button>
+      <div class="button-group" style="margin-top: 15px;">
+        <button id="btn-enter" type="button" style="width: 100%; background: #be185d; color: white; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px;">✨ Entrar na Mesa</button>
       </div>
     </div>
   </div>
@@ -51,36 +46,35 @@
       <div class="timer-box">⌛ <span id="timer">30</span>s</div>
     </div>
 
-    <!-- MESA DO JOGO -->
+    <!-- MESA DO JOGO (6 Assentos Intercalados) -->
     <div class="table">
-      <!-- 6 Posições das Jogadoras -->
       <div class="seat seat-0" id="seat-0">
-        <div class="player-info" id="info-0">Vazio</div>
+        <div class="player-info" id="info-0">Vazio (Trio A)</div>
         <div class="cards-container" id="cards-0"></div>
       </div>
 
       <div class="seat seat-1" id="seat-1">
-        <div class="player-info" id="info-1">Vazio</div>
+        <div class="player-info" id="info-1">Vazio (Trio B)</div>
         <div class="cards-container" id="cards-1"></div>
       </div>
 
       <div class="seat seat-2" id="seat-2">
-        <div class="player-info" id="info-2">Vazio</div>
+        <div class="player-info" id="info-2">Vazio (Trio A)</div>
         <div class="cards-container" id="cards-2"></div>
       </div>
 
       <div class="seat seat-3" id="seat-3">
-        <div class="player-info" id="info-3">Vazio</div>
+        <div class="player-info" id="info-3">Vazio (Trio B)</div>
         <div class="cards-container" id="cards-3"></div>
       </div>
 
       <div class="seat seat-4" id="seat-4">
-        <div class="player-info" id="info-4">Vazio</div>
+        <div class="player-info" id="info-4">Vazio (Trio A)</div>
         <div class="cards-container" id="cards-4"></div>
       </div>
 
       <div class="seat seat-5" id="seat-5">
-        <div class="player-info" id="info-5">Vazio</div>
+        <div class="player-info" id="info-5">Vazio (Trio B)</div>
         <div class="cards-container" id="cards-5"></div>
       </div>
 
@@ -97,9 +91,9 @@
     <!-- PAINEL DE AÇÕES E LOGS -->
     <div class="bottom-bar">
       <div class="action-buttons">
-        <button onclick="askTruco()" class="btn-truco">TRUCO!</button>
-        <button onclick="addBot()" class="btn-bot">+ Adicionar Bot</button>
-        <button onclick="resetMesa()" class="btn-reset">Sair / Resetar Sala</button>
+        <button id="btn-truco" type="button" class="btn-truco">TRUCO!</button>
+        <button id="btn-bot" type="button" class="btn-bot">+ Adicionar Bot</button>
+        <button id="btn-leave" type="button" class="btn-reset">Sair da Mesa</button>
       </div>
       <div id="log" class="log-box">Aguardando jogadoras...</div>
     </div>
