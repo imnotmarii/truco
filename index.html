@@ -14,21 +14,23 @@
     }
 
     body {
-      background: #111827;
+      background: #0D1117;
       color: #F9FAFB;
       min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      overflow-x: hidden;
+      overflow: hidden;
     }
 
     #app {
-      width: 100%;
-      max-width: 900px;
+      width: 100vw;
       height: 100vh;
+      max-width: 1200px;
+      max-height: 900px;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
     .screen {
@@ -44,74 +46,42 @@
     }
 
     .card-box {
-      background: #1F2937;
+      background: #161B22;
       border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.7);
       margin: auto;
       width: 100%;
       max-width: 480px;
+      border: 1px solid #30363D;
     }
 
     .text-center { text-align: center; }
 
-    h1 {
-      font-size: 2rem;
-      color: #F3F4F6;
-      margin-bottom: 4px;
-    }
-
+    h1 { font-size: 2rem; color: #F3F4F6; margin-bottom: 4px; }
     h2 { font-size: 1.5rem; color: #F3F4F6; }
 
-    .subtitle {
-      color: #9CA3AF;
-      font-size: 0.9rem;
-      margin-bottom: 24px;
-    }
+    .subtitle { color: #8B949E; font-size: 0.9rem; margin-bottom: 24px; }
 
-    .form-group {
-      margin-bottom: 20px;
-      text-align: left;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 0.85rem;
-      color: #D1D5DB;
-      margin-bottom: 6px;
-    }
+    .form-group { margin-bottom: 20px; text-align: left; }
+    .form-group label { display: block; font-size: 0.85rem; color: #C9D1D9; margin-bottom: 6px; }
 
     input[type="text"] {
       width: 100%;
       padding: 12px 16px;
       border-radius: 8px;
-      border: 1px solid #374151;
-      background: #111827;
+      border: 1px solid #30363D;
+      background: #0D1117;
       color: #FFF;
       font-size: 1rem;
       outline: none;
     }
 
-    input[type="text"]:focus {
-      border-color: #10B981;
-    }
+    input[type="text"]:focus { border-color: #2EA043; }
 
-    .actions-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .divider {
-      font-size: 0.8rem;
-      color: #6B7280;
-      margin: 8px 0;
-    }
-
-    .join-group {
-      display: flex;
-      gap: 8px;
-    }
+    .actions-stack { display: flex; flex-direction: column; gap: 12px; }
+    .divider { font-size: 0.8rem; color: #8B949E; margin: 8px 0; }
+    .join-group { display: flex; gap: 8px; }
 
     .btn {
       padding: 12px 20px;
@@ -124,63 +94,39 @@
     }
 
     .btn:active { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .btn-primary { background: #10B981; color: #FFF; width: 100%; }
-    .btn-secondary { background: #3B82F6; color: #FFF; }
-    .btn-success { background: #059669; color: #FFF; }
-    .btn-warning { background: #F59E0B; color: #FFF; }
-    .btn-danger { background: #EF4444; color: #FFF; }
-    .btn-truco { background: #8B5CF6; color: #FFF; font-size: 1.1rem; width: 100%; padding: 14px; }
+    .btn-primary { background: #2EA043; color: #FFF; width: 100%; }
+    .btn-secondary { background: #1F6FEB; color: #FFF; }
+    .btn-success { background: #238636; color: #FFF; }
+    .btn-warning { background: #D29922; color: #FFF; }
+    .btn-danger { background: #DA3633; color: #FFF; }
+    .btn-truco { background: #8957E5; color: #FFF; font-size: 1.1rem; width: 100%; padding: 12px; }
 
     .btn-small { padding: 6px 12px; font-size: 0.85rem; }
-    .btn-back { background: #374151; color: #E5E7EB; }
+    .btn-back { background: #21262D; color: #C9D1D9; border: 1px solid #30363D; }
 
-    .lobby-header {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
+    .lobby-header { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .highlight-code { color: #3FB950; letter-spacing: 2px; }
 
-    .highlight-code {
-      color: #10B981;
-      letter-spacing: 2px;
-    }
-
-    .trios-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
+    .trios-container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
 
     .trio-box {
-      background: #111827;
+      background: #0D1117;
       border-radius: 12px;
       padding: 12px;
-      border: 2px solid #374151;
+      border: 2px solid #30363D;
     }
 
-    .trio-a { border-color: #3B82F6; }
-    .trio-b { border-color: #EC4899; }
+    .trio-a { border-color: #1F6FEB; }
+    .trio-b { border-color: #F778BA; }
 
-    .trio-box h3 {
-      font-size: 1rem;
-      margin-bottom: 8px;
-      text-align: center;
-    }
+    .trio-box h3 { font-size: 1rem; margin-bottom: 8px; text-align: center; }
 
-    .slots-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      min-height: 120px;
-      margin-bottom: 12px;
-    }
+    .slots-list { display: flex; flex-direction: column; gap: 6px; min-height: 120px; margin-bottom: 12px; }
 
     .player-slot {
-      background: #1F2937;
+      background: #161B22;
       padding: 8px 12px;
       border-radius: 6px;
       font-size: 0.85rem;
@@ -189,97 +135,138 @@
       justify-content: space-between;
     }
 
-    .player-slot.empty {
-      color: #4B5563;
-      border: 1px dashed #374151;
-      background: transparent;
-    }
+    .player-slot.empty { color: #484F58; border: 1px dashed #30363D; background: transparent; }
 
-    .btn-trio {
-      width: 100%;
-      padding: 8px;
-      font-size: 0.85rem;
-      background: #374151;
-      color: #FFF;
-    }
+    .btn-trio { width: 100%; padding: 8px; font-size: 0.85rem; background: #21262D; color: #FFF; }
 
     .lobby-footer { text-align: center; }
-
-    .players-counter {
-      font-size: 0.9rem;
-      color: #9CA3AF;
-      margin-bottom: 12px;
-    }
-
+    .players-counter { font-size: 0.9rem; color: #8B949E; margin-bottom: 12px; }
     .btn-large { width: 100%; padding: 14px; font-size: 1.1rem; }
 
+    /* MESA DE JOGO */
     .game-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 12px;
-      background: #1F2937;
+      padding: 8px 16px;
+      background: #161B22;
       border-radius: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
+      border: 1px solid #30363D;
     }
 
-    .scoreboard {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .score-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .score-item.trio-a .team-name { color: #60A5FA; }
-    .score-item.trio-b .team-name { color: #F472B6; }
-
+    .scoreboard { display: flex; align-items: center; gap: 16px; }
+    .score-item { display: flex; flex-direction: column; align-items: center; }
+    .score-item.trio-a .team-name { color: #58A6FF; }
+    .score-item.trio-b .team-name { color: #F778BA; }
     .team-name { font-size: 0.75rem; text-transform: uppercase; font-weight: bold; }
-    .score-val { font-size: 1.4rem; font-weight: bold; }
-    .score-divider { font-weight: bold; color: #4B5563; }
-    .room-info { font-size: 0.8rem; color: #9CA3AF; }
+    .score-val { font-size: 1.3rem; font-weight: bold; }
+    .score-divider { font-weight: bold; color: #484F58; }
+    .room-info { font-size: 0.8rem; color: #8B949E; }
 
+    /* FELT TABLE CIRCULAR */
     .felt-table {
       flex: 1;
-      background: radial-gradient(circle, #065F46 0%, #047857 50%, #064E3B 100%);
-      border-radius: 20px;
-      border: 8px solid #064E3B;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+      background: radial-gradient(circle, #0F5132 0%, #0A3622 65%, #051B11 100%);
+      border-radius: 100px;
+      border: 10px solid #2D1A0E;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,0,0,0.5);
       position: relative;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 16px;
+      justify-content: center;
+      align-items: center;
     }
 
-    .deck-center {
+    /* POSICIONAMENTO DAS 6 JOGADORAS EM SENTIDO ANTI-HORÁRIO */
+    .seat {
       position: absolute;
-      top: 16px;
-      left: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      z-index: 5;
+    }
+
+    .seat-bottom      { bottom: 10px; left: 50%; transform: translateX(-50%); }
+    .seat-bottom-right{ bottom: 18%; right: 5%; }
+    .seat-top-right   { top: 18%; right: 5%; }
+    .seat-top         { top: 10px; left: 50%; transform: translateX(-50%); }
+    .seat-top-left    { top: 18%; left: 5%; }
+    .seat-bottom-left { bottom: 18%; left: 5%; }
+
+    .seat-badge {
+      background: rgba(22, 27, 34, 0.9);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      border: 2px solid #30363D;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .seat-badge.trio-a { border-color: #1F6FEB; }
+    .seat-badge.trio-b { border-color: #F778BA; }
+    .seat-badge.active-turn { border-color: #3FB950; box-shadow: 0 0 10px #3FB950; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .cards-in-hand-count {
+      display: flex;
+      gap: 2px;
+    }
+
+    .mini-card-back {
+      width: 14px;
+      height: 20px;
+      background: linear-gradient(135deg, #1E3A8A 25%, #1D4ED8 50%, #1E3A8A 75%);
+      border: 1px solid #FFF;
+      border-radius: 2px;
+    }
+
+    /* MESA CENTRAL DE CARTAS JOGADAS E VIRA */
+    .table-center {
+      position: relative;
+      width: 320px;
+      height: 220px;
+      border: 2px dashed rgba(255,255,255,0.15);
+      border-radius: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .deck-vira-area {
+      position: absolute;
+      top: 10px;
+      left: 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
 
-    .card-stack { position: relative; width: 50px; height: 75px; }
-    .vira-label { font-size: 0.65rem; color: #A7F3D0; font-weight: bold; margin-top: 4px; }
+    .card-stack { position: relative; width: 42px; height: 60px; }
+    .vira-label { font-size: 0.6rem; color: #A7F3D0; font-weight: bold; margin-top: 2px; }
 
     .card {
-      width: 50px;
-      height: 75px;
+      width: 42px;
+      height: 60px;
       background: white;
-      border-radius: 6px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      border-radius: 5px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.4);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 4px;
+      padding: 3px;
       font-weight: bold;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
       position: absolute;
     }
 
@@ -287,128 +274,138 @@
     .card.black { color: #111827; }
 
     .card-back {
-      background: linear-gradient(135deg, #1E3A8A 25%, #1D4ED8 25%, #1D4ED8 50%, #1E3A8A 50%, #1E3A8A 75%, #1D4ED8 75%);
+      background: linear-gradient(135deg, #1E3A8A 25%, #1D4ED8 50%, #1E3A8A 75%);
       background-size: 10px 10px;
       border: 2px solid #FFF;
     }
 
-    .vira-pos { left: 15px; top: 0; transform: rotate(15deg); }
+    .vira-pos { left: 12px; top: 0; transform: rotate(15deg); }
 
-    .played-cards-area {
-      flex: 1;
+    .played-cards-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      grid-template-rows: repeat(2, 1fr);
+      gap: 10px;
+      width: 240px;
+      height: 150px;
       align-items: center;
       justify-items: center;
-      margin-top: 60px;
     }
 
     .played-card-slot {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      position: relative;
+    }
+
+    .played-card-slot .card {
+      position: relative;
     }
 
     .player-tag {
-      font-size: 0.7rem;
-      background: rgba(0,0,0,0.6);
-      padding: 2px 6px;
-      border-radius: 4px;
+      font-size: 0.6rem;
+      background: rgba(0,0,0,0.7);
+      padding: 1px 4px;
+      border-radius: 3px;
       color: #FFF;
+      margin-top: 2px;
+      white-space: nowrap;
+    }
+
+    /* BANNER DE NOTIFICAÇÃO GLOBAL DO TRUCO */
+    .global-announcement {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(137, 87, 229, 0.95);
+      color: #FFF;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      z-index: 10;
+      display: none;
+      border: 1px solid #FFF;
     }
 
     .game-status-log {
-      background: rgba(0,0,0,0.6);
-      padding: 8px 12px;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 0.85rem;
-      color: #FDE047;
-      margin-bottom: 8px;
-    }
-
-    .truco-actions { margin-bottom: 8px; }
-
-    .truco-modal {
       position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.8);
+      bottom: 120px;
+      background: rgba(0,0,0,0.6);
+      padding: 6px 14px;
       border-radius: 12px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 10;
+      font-size: 0.8rem;
+      color: #FDE047;
+      z-index: 5;
     }
 
-    .truco-modal.hidden { display: none; }
-
-    .modal-content {
-      background: #1F2937;
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-      max-width: 320px;
-    }
-
-    .modal-buttons {
+    /* PAINEL INFERIOR DO JOGADOR */
+    .player-bottom-bar {
+      background: #161B22;
+      border-radius: 16px;
+      padding: 10px 16px;
+      margin-top: 8px;
+      border: 1px solid #30363D;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      margin-top: 16px;
     }
-
-    .player-bottom-bar {
-      background: #1F2937;
-      border-radius: 12px;
-      padding: 12px;
-      margin-top: 12px;
-    }
-
-    .turn-indicator {
-      font-size: 0.85rem;
-      color: #9CA3AF;
-      text-align: center;
-      margin-bottom: 8px;
-    }
-
-    .turn-indicator strong { color: #10B981; }
 
     .cards-control-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 0.75rem;
-      color: #9CA3AF;
-      margin-bottom: 8px;
+      color: #8B949E;
     }
 
-    .cover-toggle {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-      color: #F3F4F6;
-    }
+    .cover-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; color: #C9D1D9; }
 
     .my-cards-container {
       display: flex;
       justify-content: center;
-      gap: 12px;
-      min-height: 90px;
+      gap: 16px;
+      min-height: 85px;
     }
 
     .my-card {
       position: relative;
-      width: 60px;
-      height: 90px;
+      width: 55px;
+      height: 82px;
       cursor: pointer;
-      transition: transform 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-size: 1rem;
     }
 
-    .my-card:hover { transform: translateY(-8px); }
-    .my-card.disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .my-card:hover { transform: translateY(-10px); box-shadow: 0 8px 15px rgba(0,0,0,0.5); }
+    .my-card.disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+    .truco-modal {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+    }
+
+    .truco-modal.hidden { display: none; }
+
+    .modal-content {
+      background: #161B22;
+      padding: 24px;
+      border-radius: 16px;
+      text-align: center;
+      max-width: 340px;
+      border: 2px solid #8957E5;
+    }
+
+    .modal-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
   </style>
 </head>
 <body>
@@ -437,7 +434,7 @@
       </div>
     </div>
 
-    <!-- TELA 2: LOBBY / ESCOLHA DOS TRIOS -->
+    <!-- TELA 2: LOBBY -->
     <div id="screen-lobby" class="screen">
       <div class="card-box">
         <div class="lobby-header">
@@ -447,14 +444,12 @@
         </div>
 
         <div class="trios-container">
-          <!-- TRIO A -->
           <div class="trio-box trio-a">
             <h3>Trio A 🏆</h3>
             <div id="list-trio-a" class="slots-list"></div>
             <button id="btn-join-trio-a" class="btn btn-trio">Entrar no Trio A</button>
           </div>
 
-          <!-- TRIO B -->
           <div class="trio-box trio-b">
             <h3>Trio B 👑</h3>
             <div id="list-trio-b" class="slots-list"></div>
@@ -488,25 +483,36 @@
       </div>
 
       <div class="felt-table">
-        <div class="deck-center">
-          <div class="card-stack">
-            <div class="card card-back"></div>
-            <div id="vira-card" class="card card-front vira-pos">
-              <span class="val">?</span>
-              <span class="suit">♠</span>
+        <!-- BANNER DE NOTIFICAÇÃO DO TRUCO -->
+        <div id="global-announcement" class="global-announcement"></div>
+
+        <!-- POSIÇÕES DA MESA EM SENTIDO ANTI-HORÁRIO -->
+        <div id="seat-0" class="seat seat-bottom"></div>
+        <div id="seat-1" class="seat seat-bottom-right"></div>
+        <div id="seat-2" class="seat seat-top-right"></div>
+        <div id="seat-3" class="seat seat-top"></div>
+        <div id="seat-4" class="seat seat-top-left"></div>
+        <div id="seat-5" class="seat seat-bottom-left"></div>
+
+        <!-- CENTRO DA MESA -->
+        <div class="table-center">
+          <div class="deck-vira-area">
+            <div class="card-stack">
+              <div class="card card-back"></div>
+              <div id="vira-card" class="card card-front vira-pos">
+                <span class="val">?</span>
+                <span class="suit">♠</span>
+              </div>
             </div>
+            <div class="vira-label">VIRA</div>
           </div>
-          <div class="vira-label">VIRA / MANILHA</div>
+
+          <div id="played-cards-grid" class="played-cards-grid"></div>
         </div>
 
-        <div id="played-cards-area" class="played-cards-area"></div>
+        <div id="game-status-log" class="game-status-log">Aguardando jogada...</div>
 
-        <div id="game-status-log" class="game-status-log">Iniciando partida...</div>
-
-        <div id="truco-actions" class="truco-actions">
-          <button id="btn-call-truco" class="btn btn-truco">TRUCO! (3 Pts)</button>
-        </div>
-
+        <!-- MODAL DE RESPOSTA DO TRUCO -->
         <div id="truco-modal" class="truco-modal hidden">
           <div class="modal-content">
             <h3 id="truco-modal-title">Desafio de Truco!</h3>
@@ -520,16 +526,14 @@
         </div>
       </div>
 
+      <!-- BARRA DE CARTAS DO JOGADOR LOCAL -->
       <div class="player-bottom-bar">
-        <div class="turn-indicator">
-          Vez de Jogar: <strong id="current-turn-name">---</strong>
-        </div>
-
         <div class="cards-control-header">
-          <span>Minhas Cartas (Apenas Você Enxerga):</span>
-          <label class="cover-toggle" id="cover-toggle-label">
+          <span>Sua Mão (Cartas Secretas):</span>
+          <button id="btn-call-truco" class="btn btn-truco" style="max-width: 220px;">TRUCO! (3 Pts)</button>
+          <label class="cover-toggle">
             <input type="checkbox" id="check-play-covered">
-            <span>Jogar Coberta / Escondida</span>
+            <span>Jogar Coberta</span>
           </label>
         </div>
 
@@ -584,11 +588,11 @@
     const scoreA = document.getElementById("score-a");
     const scoreB = document.getElementById("score-b");
     const gameStatusLog = document.getElementById("game-status-log");
-    const currentTurnName = document.getElementById("current-turn-name");
-    const playedCardsArea = document.getElementById("played-cards-area");
+    const playedCardsGrid = document.getElementById("played-cards-grid");
     const myCardsContainer = document.getElementById("my-cards-container");
     const checkPlayCovered = document.getElementById("check-play-covered");
     const viraCard = document.getElementById("vira-card");
+    const globalAnnouncement = document.getElementById("global-announcement");
 
     const btnCallTruco = document.getElementById("btn-call-truco");
     const trucoModal = document.getElementById("truco-modal");
@@ -623,6 +627,7 @@
         scoreA: 0,
         scoreB: 0,
         trucoValue: 1,
+        lastTrucoTrio: null,
         currentTurnIndex: 0,
         roundNumber: 1,
         vira: null,
@@ -694,6 +699,8 @@
       
       const trioA = roomData.players.filter(p => p.trio === "A");
       const trioB = roomData.players.filter(p => p.trio === "B");
+
+      // Intercala jogadoras no sentido anti-horário: A1 -> B1 -> A2 -> B2 -> A3 -> B3
       const orderedPlayers = [
         trioA[0], trioB[0],
         trioA[1], trioB[1],
@@ -715,6 +722,7 @@
         roundNumber: 1,
         playedCards: [],
         trucoValue: 1,
+        lastTrucoTrio: null,
         trucoState: null
       });
     });
@@ -796,10 +804,48 @@
         viraCard.className = `card card-front vira-pos ${roomData.vira.color}`;
       }
 
-      const currentPlayer = roomData.players[roomData.currentTurnIndex];
-      currentTurnName.innerText = currentPlayer ? currentPlayer.name : "---";
+      renderSeats();
+      renderPlayedCards();
+      renderMyCards();
+      updateTrucoUI();
+    }
 
-      playedCardsArea.innerHTML = "";
+    function renderSeats() {
+      const players = roomData.players;
+      const myIndex = players.findIndex(p => p.name === localPlayerName);
+      const baseIndex = myIndex >= 0 ? myIndex : 0;
+
+      // Rotaciona a lista para que o jogador local fique sempre no seat-0 (embaixo)
+      for (let i = 0; i < 6; i++) {
+        const seatElem = document.getElementById(`seat-${i}`);
+        seatElem.innerHTML = "";
+
+        const playerIdx = (baseIndex + i) % 6;
+        const player = players[playerIdx];
+
+        if (player) {
+          const isTurn = roomData.currentTurnIndex === playerIdx;
+          const badge = document.createElement("div");
+          badge.className = `seat-badge trio-${player.trio.toLowerCase()} ${isTurn ? 'active-turn' : ''}`;
+          badge.innerText = player.name + (player.name === localPlayerName ? " (Você)" : "");
+
+          const handCount = (roomData.hands[player.name] || []).length;
+          const cardsDiv = document.createElement("div");
+          cardsDiv.className = "cards-in-hand-count";
+          for (let c = 0; c < handCount; c++) {
+            const mini = document.createElement("div");
+            mini.className = "mini-card-back";
+            cardsDiv.appendChild(mini);
+          }
+
+          seatElem.appendChild(badge);
+          seatElem.appendChild(cardsDiv);
+        }
+      }
+    }
+
+    function renderPlayedCards() {
+      playedCardsGrid.innerHTML = "";
       roomData.playedCards.forEach(item => {
         const slot = document.createElement("div");
         slot.className = "played-card-slot";
@@ -818,28 +864,30 @@
 
         slot.appendChild(cardDiv);
         slot.appendChild(tag);
-        playedCardsArea.appendChild(slot);
+        playedCardsGrid.appendChild(slot);
       });
 
+      const activePlayer = roomData.players[roomData.currentTurnIndex];
+      gameStatusLog.innerText = `Vez de: ${activePlayer ? activePlayer.name : '---'} • Valendo ${roomData.trucoValue} Pt(s)`;
+    }
+
+    function renderMyCards() {
       myCardsContainer.innerHTML = "";
+      const activePlayer = roomData.players[roomData.currentTurnIndex];
+      const isMyTurn = activePlayer && activePlayer.name === localPlayerName;
       const myHand = roomData.hands[localPlayerName] || [];
-      const isMyTurn = currentPlayer && currentPlayer.name === localPlayerName;
 
       myHand.forEach((card, idx) => {
         const cDiv = document.createElement("div");
-        cDiv.className = `card my-card ${card.color} ${!isMyTurn ? 'disabled' : ''}`;
+        cDiv.className = `card my-card ${card.color} ${(!isMyTurn || roomData.trucoState) ? 'disabled' : ''}`;
         cDiv.innerHTML = `<span>${card.rank}</span><span>${card.suit}</span>`;
 
-        if (isMyTurn) {
+        if (isMyTurn && !roomData.trucoState) {
           cDiv.addEventListener("click", () => playCard(idx));
         }
 
         myCardsContainer.appendChild(cDiv);
       });
-
-      gameStatusLog.innerText = `Rodada ${roomData.roundNumber} • Valor da Mão: ${roomData.trucoValue} Pts`;
-
-      updateTrucoUI();
     }
 
     async function playCard(cardIndex) {
@@ -870,16 +918,24 @@
     }
 
     btnCallTruco.addEventListener("click", async () => {
-      if (!roomData) return;
-      const myPlayer = roomData.players.find(p => p.name === localPlayerName);
+      if (!roomData || roomData.trucoState) return;
       
+      const myPlayer = roomData.players.find(p => p.name === localPlayerName);
+      if (!myPlayer) return;
+
+      // REGRA: Quem pediu truco não pode re-aumentar até o adversário aumentar
+      if (roomData.lastTrucoTrio === myPlayer.trio) {
+        return alert("Seu trio já fez o último pedido! Aguarde os adversários pedirem aumento.");
+      }
+
       let nextVal = 3;
       if (roomData.trucoValue === 3) nextVal = 6;
-      if (roomData.trucoValue === 6) nextVal = 9;
-      if (roomData.trucoValue === 9) nextVal = 12;
+      else if (roomData.trucoValue === 6) nextVal = 9;
+      else if (roomData.trucoValue === 9) nextVal = 12;
 
       await updateDoc(doc(db, "rooms", currentRoomCode), {
         trucoState: {
+          challengerName: localPlayerName,
           challengerTrio: myPlayer.trio,
           requestedValue: nextVal
         }
@@ -889,23 +945,50 @@
     function updateTrucoUI() {
       if (!roomData) return;
 
+      const myPlayer = roomData.players.find(p => p.name === localPlayerName);
+      
+      // Atualiza o texto do botão principal do Truco conforme a escala
       if (roomData.trucoValue === 1) btnCallTruco.innerText = "TRUCO! (3 Pts)";
-      else if (roomData.trucoValue === 3) btnCallTruco.innerText = "PEDIR SEIS! (6 Pts)";
-      else if (roomData.trucoValue === 6) btnCallTruco.innerText = "PEDIR NOVE! (9 Pts)";
-      else if (roomData.trucoValue === 9) btnCallTruco.innerText = "PEDIR DOZE! (12 Pts)";
+      else if (roomData.trucoValue === 3) btnCallTruco.innerText = "PEDIR 6! (6 Pts)";
+      else if (roomData.trucoValue === 6) btnCallTruco.innerText = "PEDIR 9! (9 Pts)";
+      else if (roomData.trucoValue === 9) btnCallTruco.innerText = "PEDIR 12! (12 Pts)";
+
+      // Desabilita se o último aumento foi do mesmo trio
+      if (myPlayer && roomData.lastTrucoTrio === myPlayer.trio) {
+        btnCallTruco.disabled = true;
+      } else {
+        btnCallTruco.disabled = false;
+      }
 
       if (roomData.trucoState) {
-        const myPlayer = roomData.players.find(p => p.name === localPlayerName);
         const isOpponent = myPlayer && myPlayer.trio !== roomData.trucoState.challengerTrio;
+
+        // Notificação visual na mesa para TODAS as jogadoras
+        globalAnnouncement.style.display = "block";
+        globalAnnouncement.innerText = `📢 ${roomData.trucoState.challengerName} PEDIU TRUCO VALENDO ${roomData.trucoState.requestedValue} PTS!`;
 
         if (isOpponent) {
           trucoModal.classList.remove("hidden");
-          trucoModalTitle.innerText = `DESAFIO DE TRUCO (${roomData.trucoState.requestedValue} PTS)!`;
-          trucoModalDesc.innerText = `O Trio adversário está pedindo ${roomData.trucoState.requestedValue} Pontos!`;
+          trucoModalTitle.innerText = `DESAFIO: ${roomData.trucoState.requestedValue} PONTOS!`;
+          trucoModalDesc.innerText = `${roomData.trucoState.challengerName} (${roomData.trucoState.challengerTrio === 'A' ? 'Trio A' : 'Trio B'}) pediu aumento!`;
+
+          // Define o texto de aumento no modal
+          let raiseText = "Aumentar!";
+          if (roomData.trucoState.requestedValue === 3) raiseText = "Pedir 6!";
+          else if (roomData.trucoState.requestedValue === 6) raiseText = "Pedir 9!";
+          else if (roomData.trucoState.requestedValue === 9) raiseText = "Pedir 12!";
+
+          if (roomData.trucoState.requestedValue >= 12) {
+            btnTrucoRaise.style.display = "none";
+          } else {
+            btnTrucoRaise.style.display = "block";
+            btnTrucoRaise.innerText = raiseText;
+          }
         } else {
           trucoModal.classList.add("hidden");
         }
       } else {
+        globalAnnouncement.style.display = "none";
         trucoModal.classList.add("hidden");
       }
     }
@@ -913,7 +996,22 @@
     btnTrucoAccept.addEventListener("click", async () => {
       await updateDoc(doc(db, "rooms", currentRoomCode), {
         trucoValue: roomData.trucoState.requestedValue,
+        lastTrucoTrio: roomData.trucoState.challengerTrio,
         trucoState: null
+      });
+    });
+
+    btnTrucoRaise.addEventListener("click", async () => {
+      const myPlayer = roomData.players.find(p => p.name === localPlayerName);
+      let currentReq = roomData.trucoState.requestedValue;
+      let nextVal = currentReq === 3 ? 6 : currentReq === 6 ? 9 : 12;
+
+      await updateDoc(doc(db, "rooms", currentRoomCode), {
+        trucoState: {
+          challengerName: localPlayerName,
+          challengerTrio: myPlayer.trio,
+          requestedValue: nextVal
+        }
       });
     });
 
@@ -934,6 +1032,7 @@
         scoreA: newScoreA,
         scoreB: newScoreB,
         trucoValue: 1,
+        lastTrucoTrio: null,
         trucoState: null,
         playedCards: [],
         hands,
