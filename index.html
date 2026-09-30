@@ -3,74 +3,944 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Truco Paulista 6 Jogadores</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <title>Truco das Amigas - 6 Jogadores (2 Trios)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background: #111827;
+      color: #F9FAFB;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    #app {
+      width: 100%;
+      max-width: 900px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+      height: 100%;
+      padding: 16px;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-box {
+      background: #1F2937;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      margin: auto;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .text-center { text-align: center; }
+
+    h1 {
+      font-size: 2rem;
+      color: #F3F4F6;
+      margin-bottom: 4px;
+    }
+
+    h2 { font-size: 1.5rem; color: #F3F4F6; }
+
+    .subtitle {
+      color: #9CA3AF;
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: #D1D5DB;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #374151;
+      background: #111827;
+      color: #FFF;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: #10B981;
+    }
+
+    .actions-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .divider {
+      font-size: 0.8rem;
+      color: #6B7280;
+      margin: 8px 0;
+    }
+
+    .join-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary { background: #10B981; color: #FFF; width: 100%; }
+    .btn-secondary { background: #3B82F6; color: #FFF; }
+    .btn-success { background: #059669; color: #FFF; }
+    .btn-warning { background: #F59E0B; color: #FFF; }
+    .btn-danger { background: #EF4444; color: #FFF; }
+    .btn-truco { background: #8B5CF6; color: #FFF; font-size: 1.1rem; width: 100%; padding: 14px; }
+
+    .btn-small { padding: 6px 12px; font-size: 0.85rem; }
+    .btn-back { background: #374151; color: #E5E7EB; }
+
+    .lobby-header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .highlight-code {
+      color: #10B981;
+      letter-spacing: 2px;
+    }
+
+    .trios-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .trio-box {
+      background: #111827;
+      border-radius: 12px;
+      padding: 12px;
+      border: 2px solid #374151;
+    }
+
+    .trio-a { border-color: #3B82F6; }
+    .trio-b { border-color: #EC4899; }
+
+    .trio-box h3 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .slots-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 120px;
+      margin-bottom: 12px;
+    }
+
+    .player-slot {
+      background: #1F2937;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .player-slot.empty {
+      color: #4B5563;
+      border: 1px dashed #374151;
+      background: transparent;
+    }
+
+    .btn-trio {
+      width: 100%;
+      padding: 8px;
+      font-size: 0.85rem;
+      background: #374151;
+      color: #FFF;
+    }
+
+    .lobby-footer { text-align: center; }
+
+    .players-counter {
+      font-size: 0.9rem;
+      color: #9CA3AF;
+      margin-bottom: 12px;
+    }
+
+    .btn-large { width: 100%; padding: 14px; font-size: 1.1rem; }
+
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #1F2937;
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+
+    .scoreboard {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .score-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .score-item.trio-a .team-name { color: #60A5FA; }
+    .score-item.trio-b .team-name { color: #F472B6; }
+
+    .team-name { font-size: 0.75rem; text-transform: uppercase; font-weight: bold; }
+    .score-val { font-size: 1.4rem; font-weight: bold; }
+    .score-divider { font-weight: bold; color: #4B5563; }
+    .room-info { font-size: 0.8rem; color: #9CA3AF; }
+
+    .felt-table {
+      flex: 1;
+      background: radial-gradient(circle, #065F46 0%, #047857 50%, #064E3B 100%);
+      border-radius: 20px;
+      border: 8px solid #064E3B;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+    }
+
+    .deck-center {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .card-stack { position: relative; width: 50px; height: 75px; }
+    .vira-label { font-size: 0.65rem; color: #A7F3D0; font-weight: bold; margin-top: 4px; }
+
+    .card {
+      width: 50px;
+      height: 75px;
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 4px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      position: absolute;
+    }
+
+    .card.red { color: #DC2626; }
+    .card.black { color: #111827; }
+
+    .card-back {
+      background: linear-gradient(135deg, #1E3A8A 25%, #1D4ED8 25%, #1D4ED8 50%, #1E3A8A 50%, #1E3A8A 75%, #1D4ED8 75%);
+      background-size: 10px 10px;
+      border: 2px solid #FFF;
+    }
+
+    .vira-pos { left: 15px; top: 0; transform: rotate(15deg); }
+
+    .played-cards-area {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      align-items: center;
+      justify-items: center;
+      margin-top: 60px;
+    }
+
+    .played-card-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .player-tag {
+      font-size: 0.7rem;
+      background: rgba(0,0,0,0.6);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #FFF;
+    }
+
+    .game-status-log {
+      background: rgba(0,0,0,0.6);
+      padding: 8px 12px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #FDE047;
+      margin-bottom: 8px;
+    }
+
+    .truco-actions { margin-bottom: 8px; }
+
+    .truco-modal {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .truco-modal.hidden { display: none; }
+
+    .modal-content {
+      background: #1F2937;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 320px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .player-bottom-bar {
+      background: #1F2937;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+
+    .turn-indicator {
+      font-size: 0.85rem;
+      color: #9CA3AF;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .turn-indicator strong { color: #10B981; }
+
+    .cards-control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #9CA3AF;
+      margin-bottom: 8px;
+    }
+
+    .cover-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      color: #F3F4F6;
+    }
+
+    .my-cards-container {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      min-height: 90px;
+    }
+
+    .my-card {
+      position: relative;
+      width: 60px;
+      height: 90px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .my-card:hover { transform: translateY(-8px); }
+    .my-card.disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  </style>
 </head>
 <body>
-
-  <!-- TELA DE LOBBY / ENTRADA -->
-  <div id="lobby-screen" class="lobby-container">
-    <div class="lobby-card">
-      <h1>🎴 Truco Paulista (Mesa Única)</h1>
-
-      <div class="input-group">
-        <label for="player-name">Seu Nome:</label>
-        <input type="text" id="player-name" placeholder="Ex: Mari" required />
-      </div>
-
-      <div class="input-group" style="margin-top: 10px;">
-        <label for="team-select">Escolha seu Trio:</label>
-        <select id="team-select">
-          <option value="A">Trio A</option>
-          <option value="B">Trio B</option>
-        </select>
-      </div>
-
-      <div class="button-group" style="margin-top: 20px;">
-        <button id="btn-enter" type="button" style="width: 100%; background: #be185d; color: white; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px;">✨ Entrar na Mesa</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- TELA DO JOGO -->
-  <div id="game-screen" class="game-container" style="display: none;">
-    
-    <div class="top-bar">
-      <div class="score-box">Trio A: <span id="score-a">0</span></div>
-      <div class="score-box">Mão: <span id="hand-val">1 pt</span></div>
-      <div class="score-box">Trio B: <span id="score-b">0</span></div>
-      <div class="timer-box">⌛ <span id="timer">30</span>s</div>
-    </div>
-
-    <!-- MESA DO JOGO (6 Assentos Mapeados) -->
-    <div class="table">
-      <div class="seat seat-0" id="seat-0"><div class="player-info" id="info-0">Vazio (Trio A)</div></div>
-      <div class="seat seat-1" id="seat-1"><div class="player-info" id="info-1">Vazio (Trio B)</div></div>
-      <div class="seat seat-2" id="seat-2"><div class="player-info" id="info-2">Vazio (Trio A)</div></div>
-      <div class="seat seat-3" id="seat-3"><div class="player-info" id="info-3">Vazio (Trio B)</div></div>
-      <div class="seat seat-4" id="seat-4"><div class="player-info" id="info-4">Vazio (Trio A)</div></div>
-      <div class="seat seat-5" id="seat-5"><div class="player-info" id="info-5">Vazio (Trio B)</div></div>
-
-      <div class="table-center">
-        <div class="vira-container">
-          <span>Vira:</span>
-          <div id="vira-card-slot"></div>
+  <div id="app">
+    <!-- TELA 1: MENU PRINCIPAL -->
+    <div id="screen-menu" class="screen active">
+      <div class="card-box text-center">
+        <h1>♠️ Truco das Amigas 🖐️</h1>
+        <p class="subtitle">6 Jogadores • 2 Trios Online</p>
+        
+        <div class="form-group">
+          <label for="input-nickname">Seu Apelido / Nome:</label>
+          <input type="text" id="input-nickname" placeholder="Ex: Mariana" maxlength="12">
         </div>
-        <div class="center-mat" id="center-mat"></div>
+
+        <div class="actions-stack">
+          <button id="btn-create-room" class="btn btn-primary">Criar Nova Sala</button>
+          
+          <div class="divider">ou entre em uma sala existente</div>
+          
+          <div class="join-group">
+            <input type="text" id="input-room-code" placeholder="CÓDIGO (5 DÍGITOS)" maxlength="5">
+            <button id="btn-join-room" class="btn btn-secondary">Entrar</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="bottom-bar">
-      <div class="action-buttons">
-        <button id="btn-truco" type="button" class="btn-truco">TRUCO!</button>
-        <button id="btn-bot" type="button" class="btn-bot">+ Adicionar Bot</button>
-        <button id="btn-leave" type="button" class="btn-reset">Sair da Mesa</button>
+    <!-- TELA 2: LOBBY / ESCOLHA DOS TRIOS -->
+    <div id="screen-lobby" class="screen">
+      <div class="card-box">
+        <div class="lobby-header">
+          <button id="btn-back-lobby" class="btn btn-small btn-back">⬅️ Voltar</button>
+          <h2>Sala: <span id="lobby-room-code" class="highlight-code">-----</span></h2>
+          <p class="subtitle">Aguardando as 6 amigas entrarem na sala...</p>
+        </div>
+
+        <div class="trios-container">
+          <!-- TRIO A -->
+          <div class="trio-box trio-a">
+            <h3>Trio A 🏆</h3>
+            <div id="list-trio-a" class="slots-list"></div>
+            <button id="btn-join-trio-a" class="btn btn-trio">Entrar no Trio A</button>
+          </div>
+
+          <!-- TRIO B -->
+          <div class="trio-box trio-b">
+            <h3>Trio B 👑</h3>
+            <div id="list-trio-b" class="slots-list"></div>
+            <button id="btn-join-trio-b" class="btn btn-trio">Entrar no Trio B</button>
+          </div>
+        </div>
+
+        <div class="lobby-footer">
+          <div class="players-counter">Conectadas: <span id="lobby-count">0</span> / 6</div>
+          <button id="btn-start-game" class="btn btn-success btn-large" disabled>Aguardando 6 Jogadoras...</button>
+        </div>
       </div>
-      <div id="log" class="log-box">Aguardando jogadoras...</div>
+    </div>
+
+    <!-- TELA 3: MESA DE JOGO -->
+    <div id="screen-game" class="screen">
+      <div class="game-header">
+        <button id="btn-back-game" class="btn btn-small btn-back">⬅️ Sair da Sala</button>
+        <div class="scoreboard">
+          <div class="score-item trio-a">
+            <span class="team-name">Trio A</span>
+            <span id="score-a" class="score-val">0</span>
+          </div>
+          <div class="score-divider">X</div>
+          <div class="score-item trio-b">
+            <span class="team-name">Trio B</span>
+            <span id="score-b" class="score-val">0</span>
+          </div>
+        </div>
+        <div class="room-info">Sala: <strong id="game-room-code">-----</strong></div>
+      </div>
+
+      <div class="felt-table">
+        <div class="deck-center">
+          <div class="card-stack">
+            <div class="card card-back"></div>
+            <div id="vira-card" class="card card-front vira-pos">
+              <span class="val">?</span>
+              <span class="suit">♠</span>
+            </div>
+          </div>
+          <div class="vira-label">VIRA / MANILHA</div>
+        </div>
+
+        <div id="played-cards-area" class="played-cards-area"></div>
+
+        <div id="game-status-log" class="game-status-log">Iniciando partida...</div>
+
+        <div id="truco-actions" class="truco-actions">
+          <button id="btn-call-truco" class="btn btn-truco">TRUCO! (3 Pts)</button>
+        </div>
+
+        <div id="truco-modal" class="truco-modal hidden">
+          <div class="modal-content">
+            <h3 id="truco-modal-title">Desafio de Truco!</h3>
+            <p id="truco-modal-desc">O trio adversário pediu Truco!</p>
+            <div class="modal-buttons">
+              <button id="btn-truco-accept" class="btn btn-success">Aceitar</button>
+              <button id="btn-truco-raise" class="btn btn-warning">Aumentar!</button>
+              <button id="btn-truco-fold" class="btn btn-danger">Fugir / Correr</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-bottom-bar">
+        <div class="turn-indicator">
+          Vez de Jogar: <strong id="current-turn-name">---</strong>
+        </div>
+
+        <div class="cards-control-header">
+          <span>Minhas Cartas (Apenas Você Enxerga):</span>
+          <label class="cover-toggle" id="cover-toggle-label">
+            <input type="checkbox" id="check-play-covered">
+            <span>Jogar Coberta / Escondida</span>
+          </label>
+        </div>
+
+        <div id="my-cards-container" class="my-cards-container"></div>
+      </div>
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCsFnhp2zR1ePlPRVvyFTgizyADoZdGDto",
+      authDomain: "truco-das-amigas.firebaseapp.com",
+      projectId: "truco-das-amigas",
+      storageBucket: "truco-das-amigas.firebasestorage.app",
+      messagingSenderId: "71871773709",
+      appId: "1:71871773709:web:6f5e1ca945bd80d50e2944",
+      measurementId: "G-2RW8N570RE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let localPlayerName = "";
+    let currentRoomCode = "";
+    let unsubscribeRoom = null;
+    let roomData = null;
+
+    const screenMenu = document.getElementById("screen-menu");
+    const screenLobby = document.getElementById("screen-lobby");
+    const screenGame = document.getElementById("screen-game");
+
+    const inputNickname = document.getElementById("input-nickname");
+    const inputRoomCode = document.getElementById("input-room-code");
+    const btnCreateRoom = document.getElementById("btn-create-room");
+    const btnJoinRoom = document.getElementById("btn-join-room");
+
+    const btnBackLobby = document.getElementById("btn-back-lobby");
+    const btnBackGame = document.getElementById("btn-back-game");
+
+    const lobbyRoomCode = document.getElementById("lobby-room-code");
+    const lobbyCount = document.getElementById("lobby-count");
+    const listTrioA = document.getElementById("list-trio-a");
+    const listTrioB = document.getElementById("list-trio-b");
+    const btnJoinTrioA = document.getElementById("btn-join-trio-a");
+    const btnJoinTrioB = document.getElementById("btn-join-trio-b");
+    const btnStartGame = document.getElementById("btn-start-game");
+
+    const gameRoomCode = document.getElementById("game-room-code");
+    const scoreA = document.getElementById("score-a");
+    const scoreB = document.getElementById("score-b");
+    const gameStatusLog = document.getElementById("game-status-log");
+    const currentTurnName = document.getElementById("current-turn-name");
+    const playedCardsArea = document.getElementById("played-cards-area");
+    const myCardsContainer = document.getElementById("my-cards-container");
+    const checkPlayCovered = document.getElementById("check-play-covered");
+    const viraCard = document.getElementById("vira-card");
+
+    const btnCallTruco = document.getElementById("btn-call-truco");
+    const trucoModal = document.getElementById("truco-modal");
+    const trucoModalTitle = document.getElementById("truco-modal-title");
+    const trucoModalDesc = document.getElementById("truco-modal-desc");
+    const btnTrucoAccept = document.getElementById("btn-truco-accept");
+    const btnTrucoRaise = document.getElementById("btn-truco-raise");
+    const btnTrucoFold = document.getElementById("btn-truco-fold");
+
+    function switchScreen(screen) {
+      screenMenu.classList.remove("active");
+      screenLobby.classList.remove("active");
+      screenGame.classList.remove("active");
+      screen.classList.add("active");
+    }
+
+    function generateRoomCode() {
+      return Math.floor(10000 + Math.random() * 90000).toString();
+    }
+
+    btnCreateRoom.addEventListener("click", async () => {
+      const name = inputNickname.value.trim();
+      if (!name) return alert("Por favor, digite seu nome!");
+      
+      localPlayerName = name;
+      currentRoomCode = generateRoomCode();
+
+      const newRoom = {
+        code: currentRoomCode,
+        status: "LOBBY",
+        players: [{ name: localPlayerName, trio: "A" }],
+        scoreA: 0,
+        scoreB: 0,
+        trucoValue: 1,
+        currentTurnIndex: 0,
+        roundNumber: 1,
+        vira: null,
+        playedCards: [],
+        hands: {},
+        trucoState: null
+      };
+
+      await setDoc(doc(db, "rooms", currentRoomCode), newRoom);
+      listenToRoom(currentRoomCode);
+      switchScreen(screenLobby);
+    });
+
+    btnJoinRoom.addEventListener("click", async () => {
+      const name = inputNickname.value.trim();
+      const code = inputRoomCode.value.trim();
+      if (!name || !code) return alert("Preencha seu nome e o código da sala!");
+
+      localPlayerName = name;
+      const roomRef = doc(db, "rooms", code);
+      const snap = await getDoc(roomRef);
+
+      if (!snap.exists()) return alert("Sala não encontrada!");
+      
+      const data = snap.data();
+      if (data.players.length >= 6 && !data.players.find(p => p.name === name)) {
+        return alert("Sala cheia! Máximo de 6 jogadoras.");
+      }
+
+      if (!data.players.find(p => p.name === name)) {
+        const trioACount = data.players.filter(p => p.trio === "A").length;
+        const assignedTrio = trioACount < 3 ? "A" : "B";
+        data.players.push({ name, trio: assignedTrio });
+        await updateDoc(roomRef, { players: data.players });
+      }
+
+      currentRoomCode = code;
+      listenToRoom(currentRoomCode);
+      switchScreen(data.status === "PLAYING" ? screenGame : screenLobby);
+    });
+
+    btnBackLobby.addEventListener("click", leaveRoom);
+    btnBackGame.addEventListener("click", leaveRoom);
+
+    function leaveRoom() {
+      if (unsubscribeRoom) unsubscribeRoom();
+      currentRoomCode = "";
+      switchScreen(screenMenu);
+    }
+
+    btnJoinTrioA.addEventListener("click", () => changeTrio("A"));
+    btnJoinTrioB.addEventListener("click", () => changeTrio("B"));
+
+    async function changeTrio(trioTarget) {
+      if (!roomData) return;
+      const currentTrioCount = roomData.players.filter(p => p.trio === trioTarget).length;
+      if (currentTrioCount >= 3) return alert("Este trio já está cheio!");
+
+      const updatedPlayers = roomData.players.map(p => {
+        if (p.name === localPlayerName) return { ...p, trio: trioTarget };
+        return p;
+      });
+
+      await updateDoc(doc(db, "rooms", currentRoomCode), { players: updatedPlayers });
+    }
+
+    btnStartGame.addEventListener("click", async () => {
+      if (!roomData || roomData.players.length < 6) return;
+      
+      const trioA = roomData.players.filter(p => p.trio === "A");
+      const trioB = roomData.players.filter(p => p.trio === "B");
+      const orderedPlayers = [
+        trioA[0], trioB[0],
+        trioA[1], trioB[1],
+        trioA[2], trioB[2]
+      ];
+
+      const { deck, vira } = dealCards();
+      const hands = {};
+      orderedPlayers.forEach((p, idx) => {
+        hands[p.name] = [deck[idx*3], deck[idx*3+1], deck[idx*3+2]];
+      });
+
+      await updateDoc(doc(db, "rooms", currentRoomCode), {
+        status: "PLAYING",
+        players: orderedPlayers,
+        hands,
+        vira,
+        currentTurnIndex: 0,
+        roundNumber: 1,
+        playedCards: [],
+        trucoValue: 1,
+        trucoState: null
+      });
+    });
+
+    function listenToRoom(code) {
+      if (unsubscribeRoom) unsubscribeRoom();
+      
+      unsubscribeRoom = onSnapshot(doc(db, "rooms", code), (snap) => {
+        if (!snap.exists()) return;
+        roomData = snap.data();
+        
+        if (roomData.status === "LOBBY") {
+          updateLobbyUI();
+          switchScreen(screenLobby);
+        } else if (roomData.status === "PLAYING") {
+          updateGameUI();
+          switchScreen(screenGame);
+        }
+      });
+    }
+
+    function updateLobbyUI() {
+      lobbyRoomCode.innerText = roomData.code;
+      lobbyCount.innerText = roomData.players.length;
+
+      const trioA = roomData.players.filter(p => p.trio === "A");
+      const trioB = roomData.players.filter(p => p.trio === "B");
+
+      renderSlotList(listTrioA, trioA);
+      renderSlotList(listTrioB, trioB);
+
+      btnStartGame.disabled = roomData.players.length < 6 || trioA.length !== 3 || trioB.length !== 3;
+      if (roomData.players.length === 6) {
+        btnStartGame.innerText = "Começar Partida!";
+      } else {
+        btnStartGame.innerText = `Aguardando 6 Jogadoras... (${roomData.players.length}/6)`;
+      }
+    }
+
+    function renderSlotList(container, players) {
+      container.innerHTML = "";
+      for (let i = 0; i < 3; i++) {
+        const slot = document.createElement("div");
+        if (players[i]) {
+          slot.className = "player-slot";
+          slot.innerText = players[i].name + (players[i].name === localPlayerName ? " (Você)" : "");
+        } else {
+          slot.className = "player-slot empty";
+          slot.innerText = "Vaga disponível";
+        }
+        container.appendChild(slot);
+      }
+    }
+
+    const SUITS = ['♠', '♥', '♦', '♣'];
+    const RANKS = ['4', '5', '6', '7', 'Q', 'J', 'K', 'A', '2', '3'];
+
+    function dealCards() {
+      let deck = [];
+      RANKS.forEach(r => {
+        SUITS.forEach(s => {
+          deck.push({ rank: r, suit: s, color: (s==='♥'||s==='♦') ? 'red' : 'black' });
+        });
+      });
+      deck.sort(() => Math.random() - 0.5);
+
+      const vira = deck.pop();
+      return { deck, vira };
+    }
+
+    function updateGameUI() {
+      gameRoomCode.innerText = roomData.code;
+      scoreA.innerText = roomData.scoreA;
+      scoreB.innerText = roomData.scoreB;
+
+      if (roomData.vira) {
+        viraCard.querySelector(".val").innerText = roomData.vira.rank;
+        viraCard.querySelector(".suit").innerText = roomData.vira.suit;
+        viraCard.className = `card card-front vira-pos ${roomData.vira.color}`;
+      }
+
+      const currentPlayer = roomData.players[roomData.currentTurnIndex];
+      currentTurnName.innerText = currentPlayer ? currentPlayer.name : "---";
+
+      playedCardsArea.innerHTML = "";
+      roomData.playedCards.forEach(item => {
+        const slot = document.createElement("div");
+        slot.className = "played-card-slot";
+
+        const cardDiv = document.createElement("div");
+        if (item.covered) {
+          cardDiv.className = "card card-back";
+        } else {
+          cardDiv.className = `card ${item.card.color}`;
+          cardDiv.innerHTML = `<span>${item.card.rank}</span><span>${item.card.suit}</span>`;
+        }
+
+        const tag = document.createElement("span");
+        tag.className = "player-tag";
+        tag.innerText = item.playerName;
+
+        slot.appendChild(cardDiv);
+        slot.appendChild(tag);
+        playedCardsArea.appendChild(slot);
+      });
+
+      myCardsContainer.innerHTML = "";
+      const myHand = roomData.hands[localPlayerName] || [];
+      const isMyTurn = currentPlayer && currentPlayer.name === localPlayerName;
+
+      myHand.forEach((card, idx) => {
+        const cDiv = document.createElement("div");
+        cDiv.className = `card my-card ${card.color} ${!isMyTurn ? 'disabled' : ''}`;
+        cDiv.innerHTML = `<span>${card.rank}</span><span>${card.suit}</span>`;
+
+        if (isMyTurn) {
+          cDiv.addEventListener("click", () => playCard(idx));
+        }
+
+        myCardsContainer.appendChild(cDiv);
+      });
+
+      gameStatusLog.innerText = `Rodada ${roomData.roundNumber} • Valor da Mão: ${roomData.trucoValue} Pts`;
+
+      updateTrucoUI();
+    }
+
+    async function playCard(cardIndex) {
+      if (!roomData) return;
+      const currentPlayer = roomData.players[roomData.currentTurnIndex];
+      if (currentPlayer.name !== localPlayerName) return;
+
+      const myHand = [...roomData.hands[localPlayerName]];
+      const playedCard = myHand.splice(cardIndex, 1)[0];
+      const isCovered = checkPlayCovered.checked && roomData.roundNumber > 1;
+
+      const newPlayedCards = [...roomData.playedCards, {
+        playerName: localPlayerName,
+        card: playedCard,
+        covered: isCovered
+      }];
+
+      const newHands = { ...roomData.hands, [localPlayerName]: myHand };
+      let nextTurn = (roomData.currentTurnIndex + 1) % roomData.players.length;
+
+      await updateDoc(doc(db, "rooms", currentRoomCode), {
+        hands: newHands,
+        playedCards: newPlayedCards,
+        currentTurnIndex: nextTurn
+      });
+
+      checkPlayCovered.checked = false;
+    }
+
+    btnCallTruco.addEventListener("click", async () => {
+      if (!roomData) return;
+      const myPlayer = roomData.players.find(p => p.name === localPlayerName);
+      
+      let nextVal = 3;
+      if (roomData.trucoValue === 3) nextVal = 6;
+      if (roomData.trucoValue === 6) nextVal = 9;
+      if (roomData.trucoValue === 9) nextVal = 12;
+
+      await updateDoc(doc(db, "rooms", currentRoomCode), {
+        trucoState: {
+          challengerTrio: myPlayer.trio,
+          requestedValue: nextVal
+        }
+      });
+    });
+
+    function updateTrucoUI() {
+      if (!roomData) return;
+
+      if (roomData.trucoValue === 1) btnCallTruco.innerText = "TRUCO! (3 Pts)";
+      else if (roomData.trucoValue === 3) btnCallTruco.innerText = "PEDIR SEIS! (6 Pts)";
+      else if (roomData.trucoValue === 6) btnCallTruco.innerText = "PEDIR NOVE! (9 Pts)";
+      else if (roomData.trucoValue === 9) btnCallTruco.innerText = "PEDIR DOZE! (12 Pts)";
+
+      if (roomData.trucoState) {
+        const myPlayer = roomData.players.find(p => p.name === localPlayerName);
+        const isOpponent = myPlayer && myPlayer.trio !== roomData.trucoState.challengerTrio;
+
+        if (isOpponent) {
+          trucoModal.classList.remove("hidden");
+          trucoModalTitle.innerText = `DESAFIO DE TRUCO (${roomData.trucoState.requestedValue} PTS)!`;
+          trucoModalDesc.innerText = `O Trio adversário está pedindo ${roomData.trucoState.requestedValue} Pontos!`;
+        } else {
+          trucoModal.classList.add("hidden");
+        }
+      } else {
+        trucoModal.classList.add("hidden");
+      }
+    }
+
+    btnTrucoAccept.addEventListener("click", async () => {
+      await updateDoc(doc(db, "rooms", currentRoomCode), {
+        trucoValue: roomData.trucoState.requestedValue,
+        trucoState: null
+      });
+    });
+
+    btnTrucoFold.addEventListener("click", async () => {
+      const winnerTrio = roomData.trucoState.challengerTrio;
+      const pts = roomData.trucoValue;
+
+      let newScoreA = roomData.scoreA + (winnerTrio === "A" ? pts : 0);
+      let newScoreB = roomData.scoreB + (winnerTrio === "B" ? pts : 0);
+
+      const { deck, vira } = dealCards();
+      const hands = {};
+      roomData.players.forEach((p, idx) => {
+        hands[p.name] = [deck[idx*3], deck[idx*3+1], deck[idx*3+2]];
+      });
+
+      await updateDoc(doc(db, "rooms", currentRoomCode), {
+        scoreA: newScoreA,
+        scoreB: newScoreB,
+        trucoValue: 1,
+        trucoState: null,
+        playedCards: [],
+        hands,
+        vira,
+        roundNumber: 1
+      });
+    });
+  </script>
 </body>
 </html>
