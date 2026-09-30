@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Truco Paulista 6 Jogadores</title>
   <link rel="stylesheet" href="style.css">
-  
-  <!-- Biblioteca do Supabase carregada PRIMEIRO -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -14,14 +12,14 @@
   <!-- TELA DE LOBBY / ENTRADA -->
   <div id="lobby-screen" class="lobby-container">
     <div class="lobby-card">
-      <h1>🎴 Truco Paulista (6 Jogadores)</h1>
+      <h1>🎴 Truco Paulista (Mesa Única)</h1>
 
       <div class="input-group">
         <label for="player-name">Seu Nome:</label>
-        <input type="text" id="player-name" placeholder="Ex: Mari" />
+        <input type="text" id="player-name" placeholder="Ex: Mari" required />
       </div>
 
-      <div class="input-group">
+      <div class="input-group" style="margin-top: 10px;">
         <label for="team-select">Escolha seu Trio:</label>
         <select id="team-select">
           <option value="A">Trio A</option>
@@ -29,8 +27,8 @@
         </select>
       </div>
 
-      <div class="button-group" style="margin-top: 15px;">
-        <button id="btn-enter" type="button" style="width: 100%; background: #be185d; color: white; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px;">✨ Entrar na Mesa</button>
+      <div class="button-group" style="margin-top: 20px;">
+        <button id="btn-enter" type="button" style="width: 100%; background: #be185d; color: white; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px;">✨ Entrar na Mesa</button>
       </div>
     </div>
   </div>
@@ -38,7 +36,6 @@
   <!-- TELA DO JOGO -->
   <div id="game-screen" class="game-container" style="display: none;">
     
-    <!-- PLACAR SUPERIOR -->
     <div class="top-bar">
       <div class="score-box">Trio A: <span id="score-a">0</span></div>
       <div class="score-box">Mão: <span id="hand-val">1 pt</span></div>
@@ -46,39 +43,15 @@
       <div class="timer-box">⌛ <span id="timer">30</span>s</div>
     </div>
 
-    <!-- MESA DO JOGO (6 Assentos Intercalados) -->
+    <!-- MESA DO JOGO (6 Assentos Mapeados) -->
     <div class="table">
-      <div class="seat seat-0" id="seat-0">
-        <div class="player-info" id="info-0">Vazio (Trio A)</div>
-        <div class="cards-container" id="cards-0"></div>
-      </div>
+      <div class="seat seat-0" id="seat-0"><div class="player-info" id="info-0">Vazio (Trio A)</div></div>
+      <div class="seat seat-1" id="seat-1"><div class="player-info" id="info-1">Vazio (Trio B)</div></div>
+      <div class="seat seat-2" id="seat-2"><div class="player-info" id="info-2">Vazio (Trio A)</div></div>
+      <div class="seat seat-3" id="seat-3"><div class="player-info" id="info-3">Vazio (Trio B)</div></div>
+      <div class="seat seat-4" id="seat-4"><div class="player-info" id="info-4">Vazio (Trio A)</div></div>
+      <div class="seat seat-5" id="seat-5"><div class="player-info" id="info-5">Vazio (Trio B)</div></div>
 
-      <div class="seat seat-1" id="seat-1">
-        <div class="player-info" id="info-1">Vazio (Trio B)</div>
-        <div class="cards-container" id="cards-1"></div>
-      </div>
-
-      <div class="seat seat-2" id="seat-2">
-        <div class="player-info" id="info-2">Vazio (Trio A)</div>
-        <div class="cards-container" id="cards-2"></div>
-      </div>
-
-      <div class="seat seat-3" id="seat-3">
-        <div class="player-info" id="info-3">Vazio (Trio B)</div>
-        <div class="cards-container" id="cards-3"></div>
-      </div>
-
-      <div class="seat seat-4" id="seat-4">
-        <div class="player-info" id="info-4">Vazio (Trio A)</div>
-        <div class="cards-container" id="cards-4"></div>
-      </div>
-
-      <div class="seat seat-5" id="seat-5">
-        <div class="player-info" id="info-5">Vazio (Trio B)</div>
-        <div class="cards-container" id="cards-5"></div>
-      </div>
-
-      <!-- CENTRO DA MESA -->
       <div class="table-center">
         <div class="vira-container">
           <span>Vira:</span>
@@ -88,7 +61,6 @@
       </div>
     </div>
 
-    <!-- PAINEL DE AÇÕES E LOGS -->
     <div class="bottom-bar">
       <div class="action-buttons">
         <button id="btn-truco" type="button" class="btn-truco">TRUCO!</button>
